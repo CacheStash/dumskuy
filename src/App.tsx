@@ -380,6 +380,9 @@ export function App() {
               onSelectForSpecimen={handleSelectNameForSpecimen}
               onCopyText={handleCopyText}
               fontSettings={fontSettings}
+              provider={provider}
+              apiKey={currentApiKey}
+              model={model}
             />
           </div>
         )}
