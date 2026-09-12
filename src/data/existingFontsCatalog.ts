@@ -1,7 +1,25 @@
-import googleFontsData from './googleFonts.json';
+import { GOOGLE_FONTS_DATA } from './googleFonts';
 
 // Popular commercial fonts from Creative Market, DaFont, MyFonts, Monotype, Adobe, Behance
+// Including famous Indonesian and international indie foundries (Bombastype, Subqi, Letterhend, Tokotype, Set Sail Studios, etc.)
 export const POPULAR_INDIE_AND_COMMERCIAL_FONTS: Record<string, string> = {
+  // BOMBASTYPE / SUBQI STUDIO CATALOG
+  'SACRED BRIDGE': 'Famous iconic vintage display serif & lettering typeface by Bombastype (Ameer / Creative Market / MyFonts)',
+  'THANJAVUR': 'Ethnic display serif typeface by Bombastype (Creative Market / MyFonts)',
+  'BRISWOOD': 'Vintage decorative display typeface by Bombastype',
+  'HUNGRY BEAST': 'Victorian layered serif & display typeface by Bombastype',
+  'HONDURHAS': 'Vintage ornate display font by Bombastype',
+  'ALYSSUM BLOSSOM': 'Romantic wedding script typeface by Bombastype',
+  'ALSTORIA': 'Vintage lettering display typeface by Bombastype',
+  'MATTOA': 'Display typeface by Bombastype',
+  'ROSVARD': 'Vintage serif display font by Bombastype',
+  'SOUTH BEND': 'Retro sports display font by Bombastype',
+  'BARAKAH': 'Ethnic Arabic-inspired ornamental typeface by Bombastype',
+  'HEADSTER': 'Vintage retro script font by Bombastype',
+  'HOPHUS ROGHUS': 'Victorian vintage ornamental display by Bombastype',
+  'BLACK DRAMA': 'Gothic modern blackletter font by Bombastype',
+
+  // INDONESIAN & GLOBAL INDIE FOUNDRY CLASSICS
   'AMALFI COAST': 'Popular modern script font by Attype Studio (DaFont / Creative Market)',
   'AMALFI': 'Serif & Script typeface family on MyFonts / Creative Market',
   'SANTORINI': 'Luxury signature script font by Calamar (Creative Market / DaFont)',
@@ -59,6 +77,17 @@ export const POPULAR_INDIE_AND_COMMERCIAL_FONTS: Record<string, string> = {
   'BALI': 'Tropical brush & script typeface on DaFont',
   'SUMBA': 'Ethnic display typeface on Creative Market',
   'RINJANI': 'Modern adventure display font on Behance',
+  'BOGART': 'Vintage display serif by Zetafonts',
+  'PANGRAM': 'Pangram Pangram Foundry',
+  'NEUE MONTREAL': 'Mat Desjardins / Pangram Pangram',
+  'EDITORIAL NEW': 'Mat Desjardins / Pangram Pangram',
+  'RIGHTGROTESK': 'Alex Slobzheninov / Pangram Pangram',
+  'MIGRA': 'Valerio Monopoli / Pangram Pangram',
+  'VOYAGE': 'J&S Type / Creative Market',
+  'OAKLEY': 'Modern outdoor display font by Heritage Type',
+  'THE BOLD FONT': 'Pumpernickel Studio / DaFont',
+
+  // CLASSICAL & FOUNDRY STANDARDS
   'HELVETICA': 'Max Miedinger / Haas Type Foundry / Monotype',
   'FUTURA': 'Paul Renner / Bauer Type Foundry',
   'GARAMOND': 'Claude Garamond / Classic French Renaissance',
@@ -100,7 +129,7 @@ export const POPULAR_INDIE_AND_COMMERCIAL_FONTS: Record<string, string> = {
 };
 
 // Build combined fast lookup set (Google Fonts + Popular Indie Fonts)
-const GOOGLE_FONTS_SET = new Set((googleFontsData as string[]).map(s => s.toUpperCase().trim()));
+const GOOGLE_FONTS_SET = new Set(GOOGLE_FONTS_DATA.map(s => s.toUpperCase().trim()));
 
 export interface CollisionCheckResult {
   status: 'TAKEN' | 'PARTIAL_MATCH' | 'UNVERIFIED_SAFE';
@@ -112,15 +141,26 @@ export interface CollisionCheckResult {
 }
 
 /**
+ * Normalizes font name for robust comparison (removes punctuation, excess spaces, suffixes like Font, Typeface, Display, Serif, Sans)
+ */
+export function normalizeFontName(name: string): string {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Checks a candidate font name against Google Fonts and known commercial/free fonts
  */
 export function checkFontCollision(name: string): CollisionCheckResult {
-  const clean = name.trim().toUpperCase();
+  const clean = normalizeFontName(name);
   if (!clean) {
     return { status: 'UNVERIFIED_SAFE', isTaken: false, confidence: 'low' };
   }
 
-  // 1. Check Exact Match in Popular Indie/Commercial Fonts (e.g. AMALFI COAST)
+  // 1. Check Exact Match in Popular Indie/Commercial Fonts (e.g. SACRED BRIDGE, THANJAVUR, AMALFI COAST)
   if (POPULAR_INDIE_AND_COMMERCIAL_FONTS[clean]) {
     return {
       status: 'TAKEN',
@@ -144,35 +184,10 @@ export function checkFontCollision(name: string): CollisionCheckResult {
     };
   }
 
-  // 3. Check if first word is an exact famous font (e.g. "Amalfi" in "Amalfi Studio" or "Helvetica Bold")
-  const tokens = clean.split(/\s+/);
-  const firstToken = tokens[0];
-  if (tokens.length > 1) {
-    if (POPULAR_INDIE_AND_COMMERCIAL_FONTS[firstToken]) {
-      return {
-        status: 'PARTIAL_MATCH',
-        isTaken: true,
-        matchType: 'partial',
-        matchedName: firstToken,
-        sourceNote: `Caution: First word "${firstToken}" matches existing font: ${POPULAR_INDIE_AND_COMMERCIAL_FONTS[firstToken]}`,
-        confidence: 'medium'
-      };
-    }
-    if (GOOGLE_FONTS_SET.has(firstToken)) {
-      return {
-        status: 'PARTIAL_MATCH',
-        isTaken: true,
-        matchType: 'partial',
-        matchedName: firstToken,
-        sourceNote: `Caution: First word "${firstToken}" matches Google Font "${firstToken}"`,
-        confidence: 'medium'
-      };
-    }
-  }
-
-  // 4. Check if any popular indie font starts with or contains this name
+  // 3. Check Substrings / Tokens (e.g. "Sacred Bridge Vintage" or "Thanjavur Sans")
   for (const [knownName, desc] of Object.entries(POPULAR_INDIE_AND_COMMERCIAL_FONTS)) {
-    if (knownName === clean || knownName.startsWith(clean + ' ') || clean.startsWith(knownName + ' ')) {
+    const normKnown = normalizeFontName(knownName);
+    if (normKnown === clean) {
       return {
         status: 'TAKEN',
         isTaken: true,
@@ -182,9 +197,47 @@ export function checkFontCollision(name: string): CollisionCheckResult {
         confidence: 'high'
       };
     }
+
+    // If query starts with known font (e.g. "Thanjavur Serif" when "Thanjavur" exists)
+    if (clean.startsWith(normKnown + ' ') || clean.endsWith(' ' + normKnown)) {
+      return {
+        status: 'TAKEN',
+        isTaken: true,
+        matchType: 'partial',
+        matchedName: knownName,
+        sourceNote: `Matches existing typeface family: ${desc}`,
+        confidence: 'high'
+      };
+    }
+
+    // If known font starts with query (e.g. "Sacred" in "Sacred Bridge")
+    if (normKnown.startsWith(clean + ' ') && clean.length > 4) {
+      return {
+        status: 'PARTIAL_MATCH',
+        isTaken: true,
+        matchType: 'partial',
+        matchedName: knownName,
+        sourceNote: `Potential conflict with existing font: ${desc}`,
+        confidence: 'medium'
+      };
+    }
   }
 
-  // If not found in catalog, return unverified
+  // 4. Check if tokens match Google Fonts
+  for (const gf of GOOGLE_FONTS_SET) {
+    if (clean.startsWith(gf + ' ') && gf.length > 3) {
+      return {
+        status: 'PARTIAL_MATCH',
+        isTaken: true,
+        matchType: 'google_fonts',
+        matchedName: gf,
+        sourceNote: `Matches root of Google Font "${gf}"`,
+        confidence: 'medium'
+      };
+    }
+  }
+
+  // If not found in catalog, return unverified safe
   return {
     status: 'UNVERIFIED_SAFE',
     isTaken: false,

@@ -1,4 +1,4 @@
-﻿[
+﻿export const GOOGLE_FONTS_DATA: string[] = [
     "ABeeZee",
     "ADLaM Display",
     "AR One Sans",
@@ -1581,3 +1581,5 @@
     "Zilla Slab",
     "Zilla Slab Highlight"
 ]
+;
+

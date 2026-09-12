@@ -235,10 +235,15 @@ export const FontNameFinder: React.FC<FontNameFinderProps> = ({
                       <ShieldAlert className="w-3.5 h-3.5" />
                       <span>TAKEN (AI VERIFIED)</span>
                     </span>
-                  ) : (
+                  ) : manualScanResult && !manualScanResult.isTaken ? (
                     <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>CLEAR IN 1,600+ DATABASE</span>
+                      <span>AI LIVE SEARCH: LIKELY AVAILABLE</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      <span>NOT IN LOCAL DB (CONFIRM ONLINE)</span>
                     </span>
                   )}
                 </div>

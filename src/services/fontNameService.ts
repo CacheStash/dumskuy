@@ -27,6 +27,7 @@ export interface AiDeepCheckResult {
 
 /**
  * AI Deep Scan for Font Trademark & Marketplace Availability
+ * Uses Google Search Grounding with Gemini if available, plus local catalog cross-checking
  */
 export async function deepScanFontWithAI(
   fontName: string,
@@ -35,7 +36,8 @@ export async function deepScanFontWithAI(
   model?: string
 ): Promise<AiDeepCheckResult> {
   const cleanName = fontName.trim();
-  // First check local catalog
+
+  // 1. Immediate Local Catalog Check (Google Fonts, Bombastype, Creative Market, DaFont)
   const localCheck = checkFontCollision(cleanName);
   if (localCheck.isTaken) {
     return {
@@ -44,56 +46,70 @@ export async function deepScanFontWithAI(
       status: 'TAKEN',
       foundryOrDesigner: localCheck.sourceNote,
       details: localCheck.sourceNote || `Existing font match detected in registry.`,
-      sourceNote: 'Found in Font Marketplace Database'
+      sourceNote: 'Direct Registry Catalog Match'
     };
   }
 
-  // If no API key, return local result
+  // 2. If no API key provided, return local check
   if (!apiKey || !apiKey.trim()) {
     return {
       fontName: cleanName,
       isTaken: false,
       status: 'LIKELY_AVAILABLE',
-      details: 'No collisions in local 1,600+ font catalog. Verify with 1-click Google search.',
-      sourceNote: 'Local Registry Verified'
+      details: 'No collisions found in local 1,600+ font catalog. Verify with 1-click Google search.',
+      sourceNote: 'Local Catalog Verified'
     };
   }
 
-  const prompt = `You are a specialist font trademark and typography release auditor.
-Investigate if there is ANY existing typeface, commercial font, or free font released on DaFont, Creative Market, MyFonts, Monotype, Adobe Fonts, Google Fonts, Fontspring, Envato, or Behance named "${cleanName}" (or very similar).
+  // 3. Online AI Check with Live Search Guidance
+  const prompt = `Perform a thorough font trademark and availability audit for the name: "${cleanName}".
+Step 1: Search for "${cleanName} font" and "${cleanName} typeface" across Google, Creative Market, DaFont, MyFonts, Fontspring, Behance, and independent foundries (such as Bombastype, Set Sail Studios, Dharma Type, RetroStudio).
+Step 2: If an existing font, typeface family, or lettering product with this name exists, state the foundry or designer name clearly.
 
-For example:
-- "Amalfi Coast" -> TAKEN (Script font by Attype Studio on DaFont / Creative Market)
-- "Santorini" -> TAKEN (Luxury script font by Calamar on Creative Market)
-- "Wild Youth" -> TAKEN (Brush script font by Jeremy Vessey)
-
-Answer strictly in valid JSON:
+Output your final verdict strictly as a JSON markdown block:
+\`\`\`json
 {
-  "isTaken": boolean (true if commercial/free font exists with this name),
+  "isTaken": boolean,
   "status": "TAKEN" or "POSSIBLE_MATCH" or "LIKELY_AVAILABLE",
   "foundryOrDesigner": "Designer or Foundry name if known",
-  "details": "Explanation of existing font or why it is clear"
+  "details": "Accurate explanation of the existing font or verification findings"
 }
-
-Provide ONLY raw JSON.`;
+\`\`\``;
 
   try {
     let rawText = '';
+
     if (provider === 'gemini') {
       const activeModel = model || 'gemini-1.5-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey.trim()}`;
-      const res = await fetch(url, {
+      
+      // Try first with Google Search Grounding tool
+      let res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
+          tools: [{ googleSearch: {} }]
         })
       });
+
+      // If tools rejected (e.g. on older endpoints), fallback without tools
+      if (!res.ok) {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.1 }
+          })
+        });
+      }
+
       if (!res.ok) throw new Error(`Gemini status ${res.status}`);
       const data = await res.json();
       rawText = data?.candidates?.[0]?.parts?.[0]?.text || '';
     } else {
+      // Groq
       const activeModel = model || 'llama-3.3-70b-versatile';
       const url = 'https://api.groq.com/openai/v1/chat/completions';
       const res = await fetch(url, {
@@ -102,7 +118,6 @@ Provide ONLY raw JSON.`;
         body: JSON.stringify({
           model: activeModel,
           messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
           temperature: 0.1
         })
       });
@@ -111,25 +126,28 @@ Provide ONLY raw JSON.`;
       rawText = data?.choices?.[0]?.message?.content || '';
     }
 
-    let cleaned = rawText.trim();
-    if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
-    else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
+    // Extract JSON block
+    const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON block returned by AI');
+    }
 
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(jsonMatch[0]);
     return {
       fontName: cleanName,
       isTaken: !!parsed.isTaken,
       status: parsed.status || (parsed.isTaken ? 'TAKEN' : 'LIKELY_AVAILABLE'),
       foundryOrDesigner: parsed.foundryOrDesigner || undefined,
       details: parsed.details || (parsed.isTaken ? 'Font with this name exists in market.' : 'No major font release found under this exact name.'),
-      sourceNote: 'AI Deep Registry Scan'
+      sourceNote: 'AI Search Grounded Audit'
     };
   } catch (err: any) {
+    console.warn('AI Deep Scan error:', err);
     return {
       fontName: cleanName,
       isTaken: false,
       status: 'LIKELY_AVAILABLE',
-      details: 'Local catalog clear. Please use 1-click Google search link to double check.',
+      details: 'Local catalog clear. Use 1-click Google search link to double check.',
       sourceNote: 'Catalog Offline Check'
     };
   }
@@ -185,8 +203,8 @@ export async function generateFontNames(
 Generate a curated collection of ${config.count || 12} original, evocative, and commercially viable typeface names.
 
 CRITICAL INSTRUCTION TO AVOID EXISTING FONTS:
-- Do NOT output already-saturated names like "Amalfi Coast", "Santorini", "Capri", "Biarritz", "California", or "Helvetica" because they are already taken!
-- Choose fresh, authentic, hidden geographic gems, lesser-known islands, historic towns, and distinctive pairings that have NOT been heavily commercialized as font names yet.
+- Do NOT output already-saturated names like "Amalfi Coast", "Santorini", "Capri", "Biarritz", "California", "Sacred Bridge", "Thanjavur", or "Helvetica" because they are already taken!
+- Choose fresh, authentic, hidden geographic gems, lesser-known islands, historic towns, and distinctive pairings that have NOT been commercialized as font names yet.
 
 RULES:
 1. ${wordCountRule}
