@@ -5,6 +5,7 @@ import { FontUploader } from './components/FontUploader';
 import { SpecimenPreview } from './components/SpecimenPreview';
 import { FontNameFinder } from './components/FontNameFinder';
 import { ApiKeyModal } from './components/ApiKeyModal';
+import { GoogleSearchModal } from './components/GoogleSearchModal';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import {
   GenerationConfig,
@@ -13,7 +14,8 @@ import {
   ApiProvider,
   ActiveAppTab,
   FontNameCandidate,
-  FontNameFilterConfig
+  FontNameFilterConfig,
+  GoogleSearchConfig
 } from './types';
 import { generateContent } from './services/generatorService';
 import { generateFontNames } from './services/fontNameService';
@@ -36,6 +38,11 @@ export function App() {
   const [provider, setProvider] = useState<ApiProvider>(() => (localStorage.getItem('dumskuy_provider') as ApiProvider) || 'gemini');
   const [model, setModel] = useState<string>(() => localStorage.getItem('dumskuy_model') || 'gemini-1.5-flash');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  // Google CSE / Search credentials
+  const [googleCseId, setGoogleCseId] = useState<string>(() => localStorage.getItem('dumskuy_google_cse_id') || '');
+  const [googleSearchKey, setGoogleSearchKey] = useState<string>(() => localStorage.getItem('dumskuy_google_search_key') || '');
+  const [activeGoogleSearchName, setActiveGoogleSearchName] = useState<string | null>(null);
 
   // Configuration state for Dummy Copy
   const [config, setConfig] = useState<GenerationConfig>({
@@ -239,7 +246,26 @@ export function App() {
     }
   };
 
-  const handleSaveApiKeys = (keys: { geminiKey: string; groqKey: string; provider: ApiProvider; model: string }) => {
+  const handleSaveGoogleConfig = (cfg: GoogleSearchConfig) => {
+    if (cfg.cseId !== undefined) {
+      setGoogleCseId(cfg.cseId);
+      localStorage.setItem('dumskuy_google_cse_id', cfg.cseId);
+    }
+    if (cfg.apiKey !== undefined) {
+      setGoogleSearchKey(cfg.apiKey);
+      localStorage.setItem('dumskuy_google_search_key', cfg.apiKey);
+    }
+    addToast('success', 'Google Search Settings Updated', 'In-app search configuration applied.');
+  };
+
+  const handleSaveApiKeys = (keys: {
+    geminiKey: string;
+    groqKey: string;
+    provider: ApiProvider;
+    model: string;
+    googleCseId?: string;
+    googleSearchKey?: string;
+  }) => {
     setGeminiKey(keys.geminiKey);
     setGroqKey(keys.groqKey);
     setProvider(keys.provider);
@@ -249,6 +275,15 @@ export function App() {
     localStorage.setItem('dumskuy_groq_key', keys.groqKey);
     localStorage.setItem('dumskuy_provider', keys.provider);
     localStorage.setItem('dumskuy_model', keys.model);
+
+    if (keys.googleCseId !== undefined) {
+      setGoogleCseId(keys.googleCseId);
+      localStorage.setItem('dumskuy_google_cse_id', keys.googleCseId);
+    }
+    if (keys.googleSearchKey !== undefined) {
+      setGoogleSearchKey(keys.googleSearchKey);
+      localStorage.setItem('dumskuy_google_search_key', keys.googleSearchKey);
+    }
 
     const hasKey = keys.provider === 'gemini' ? !!keys.geminiKey : !!keys.groqKey;
     addToast(
@@ -336,6 +371,7 @@ export function App() {
                   onCopyText={handleCopyText}
                   onCopyAll={handleCopyAll}
                   onCopyJson={handleCopyJson}
+                  onOpenGoogleSearch={(name) => setActiveGoogleSearchName(name)}
                 />
               </div>
 
@@ -365,7 +401,7 @@ export function App() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab('specimen')}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-studio-800 hover:bg-slate-200 dark:hover:bg-studio-750 text-slate-700 dark:text-slate-200 transition-colors"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-studio-800 hover:bg-slate-200 dark:hover:bg-studio-750 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                 >
                   Back to Specimen Sheet
                 </button>
@@ -383,6 +419,9 @@ export function App() {
               provider={provider}
               apiKey={currentApiKey}
               model={model}
+              googleConfig={{ cseId: googleCseId, apiKey: googleSearchKey || geminiKey }}
+              onSaveGoogleConfig={handleSaveGoogleConfig}
+              onOpenGoogleSearch={(name) => setActiveGoogleSearchName(name)}
             />
           </div>
         )}
@@ -396,12 +435,21 @@ export function App() {
             DumSkuy — Built for Type Designers, Lettering Artists & Brand Identity Creators.
           </p>
           <p className="font-mono text-[11px]">
-            100% Free Client-Side AI & Offline Dataset
+            Live Google Search Integration & 100% Client-Side Privacy
           </p>
         </div>
       </footer>
 
-      {/* API Key Modal */}
+      {/* Live In-App Google Search Modal */}
+      <GoogleSearchModal
+        isOpen={!!activeGoogleSearchName}
+        onClose={() => setActiveGoogleSearchName(null)}
+        fontName={activeGoogleSearchName || ''}
+        googleConfig={{ cseId: googleCseId, apiKey: googleSearchKey || geminiKey }}
+        onSaveConfig={handleSaveGoogleConfig}
+      />
+
+      {/* API Key & Search Engine Modal */}
       <ApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
@@ -409,6 +457,8 @@ export function App() {
         groqKey={groqKey}
         provider={provider}
         selectedModel={model}
+        googleCseId={googleCseId}
+        googleSearchKey={googleSearchKey}
         onSave={handleSaveApiKeys}
       />
 

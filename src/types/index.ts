@@ -110,3 +110,43 @@ export interface FontNameCandidate {
   timestamp?: number;
   source?: 'ai' | 'preset';
 }
+
+/* =========================================================================
+   LIVE GOOGLE SEARCH TYPES
+   ========================================================================= */
+
+export interface GoogleSearchConfig {
+  apiKey?: string;
+  cseId?: string; // Google Programmable Search Engine ID (cx)
+}
+
+export interface LiveGoogleSearchResultItem {
+  title: string;
+  link: string;
+  snippet: string;
+  displayLink: string;
+  isFontMarketplace: boolean;
+  marketplaceName?: string;
+}
+
+export interface LiveGoogleSearchResponse {
+  query: string;
+  totalResults: string;
+  items: LiveGoogleSearchResultItem[];
+  detectedMarketplaces: string[];
+  isCollisionDetected: boolean;
+  error?: string;
+}
+
+export interface AiDeepCheckResult {
+  fontName: string;
+  isTaken: boolean;
+  status: 'TAKEN' | 'POSSIBLE_MATCH' | 'LIKELY_AVAILABLE' | 'UNVERIFIED';
+  foundryOrDesigner?: string;
+  details: string;
+  sourceNote?: string;
+  groundingUrls?: Array<{ title: string; url: string }>;
+  searchQueries?: string[];
+  error?: string;
+}
+

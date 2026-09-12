@@ -1,13 +1,16 @@
 import {
   FontNameCandidate,
   FontNameFilterConfig,
-  ApiProvider
+  ApiProvider,
+  AiDeepCheckResult,
+  LiveGoogleSearchResponse,
+  LiveGoogleSearchResultItem
 } from '../types';
 import {
   getOfflineFontNameCandidates,
   detectLigatures
 } from '../data/fontNamePresets';
-import { checkFontCollision, CollisionCheckResult } from '../data/existingFontsCatalog';
+import { checkFontCollision } from '../data/existingFontsCatalog';
 
 export interface FontNameGeneratorResult {
   candidates: FontNameCandidate[];
@@ -16,13 +19,113 @@ export interface FontNameGeneratorResult {
   providerName?: string;
 }
 
-export interface AiDeepCheckResult {
-  fontName: string;
-  isTaken: boolean;
-  status: 'TAKEN' | 'POSSIBLE_MATCH' | 'LIKELY_AVAILABLE';
-  foundryOrDesigner?: string;
-  details: string;
-  sourceNote?: string;
+export const KNOWN_FONT_MARKETPLACE_DOMAINS = [
+  'dafont.com',
+  'myfonts.com',
+  'creativemarket.com',
+  'fonts.google.com',
+  'fontspring.com',
+  'fontspace.com',
+  'fontsquirrel.com',
+  'fonts.adobe.com',
+  'behance.net',
+  'youworkforthem.com',
+  'typenetwork.com',
+  'fontbundles.net',
+  'creativefabrica.com',
+  'linotype.com',
+  'monotype.com',
+  'freefontsdownload.net',
+  'font.download',
+  'fontesk.com',
+  'envato.com',
+  'bombastype.com',
+  'subqistudio.com',
+  'velvetyne.fr'
+];
+
+/**
+ * Perform a direct Live Google Custom Search query via Google Custom Search JSON API
+ */
+export async function fetchLiveGoogleSearchResults(
+  query: string,
+  apiKey?: string,
+  cseId?: string
+): Promise<LiveGoogleSearchResponse> {
+  const cleanQuery = query.trim();
+  const targetQuery = cleanQuery.toLowerCase().includes('font') ? cleanQuery : `"${cleanQuery}" font`;
+
+  if (!apiKey || !apiKey.trim() || !cseId || !cseId.trim()) {
+    return {
+      query: targetQuery,
+      totalResults: '0',
+      items: [],
+      detectedMarketplaces: [],
+      isCollisionDetected: false,
+      error: 'Google Custom Search Engine ID (CX) or Search API Key is not configured.'
+    };
+  }
+
+  const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey.trim())}&cx=${encodeURIComponent(cseId.trim())}&q=${encodeURIComponent(targetQuery)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Google CSE returned HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const rawItems: any[] = data.items || [];
+    const detectedMarketplaces: string[] = [];
+
+    const items: LiveGoogleSearchResultItem[] = rawItems.map((item) => {
+      const displayLink = (item.displayLink || '').toLowerCase();
+      const snippet = item.snippet || '';
+      const title = item.title || '';
+
+      const matchedDomain = KNOWN_FONT_MARKETPLACE_DOMAINS.find(d => 
+        displayLink.includes(d) || item.link.toLowerCase().includes(d)
+      );
+
+      const isMarketplace = !!matchedDomain || 
+        title.toLowerCase().includes('font') || 
+        snippet.toLowerCase().includes('typeface') || 
+        snippet.toLowerCase().includes('download');
+
+      if (matchedDomain && !detectedMarketplaces.includes(matchedDomain)) {
+        detectedMarketplaces.push(matchedDomain);
+      }
+
+      return {
+        title,
+        link: item.link || '',
+        snippet,
+        displayLink: item.displayLink || '',
+        isFontMarketplace: isMarketplace,
+        marketplaceName: matchedDomain
+      };
+    });
+
+    const isCollisionDetected = detectedMarketplaces.length > 0 || items.some(i => i.isFontMarketplace);
+
+    return {
+      query: targetQuery,
+      totalResults: data.searchInformation?.totalResults || String(items.length),
+      items,
+      detectedMarketplaces,
+      isCollisionDetected
+    };
+  } catch (err: any) {
+    return {
+      query: targetQuery,
+      totalResults: '0',
+      items: [],
+      detectedMarketplaces: [],
+      isCollisionDetected: false,
+      error: err.message || 'Failed to fetch Google Search results.'
+    };
+  }
 }
 
 /**
@@ -45,55 +148,69 @@ export async function deepScanFontWithAI(
       isTaken: true,
       status: 'TAKEN',
       foundryOrDesigner: localCheck.sourceNote,
-      details: localCheck.sourceNote || `Existing font match detected in registry.`,
+      details: localCheck.sourceNote || `Existing font match detected in registry catalog.`,
       sourceNote: 'Direct Registry Catalog Match'
     };
   }
 
-  // 2. If no API key provided, return local check
+  // 2. If no API key provided, mark as UNVERIFIED ONLINE (never falsely claim "LIKELY AVAILABLE")
   if (!apiKey || !apiKey.trim()) {
     return {
       fontName: cleanName,
       isTaken: false,
-      status: 'LIKELY_AVAILABLE',
-      details: 'No collisions found in local 1,600+ font catalog. Verify with 1-click Google search.',
-      sourceNote: 'Local Catalog Verified'
+      status: 'UNVERIFIED',
+      details: 'Local catalog clear. Open Live Google Search to verify real-time market availability.',
+      sourceNote: 'Not Scanned Online'
     };
   }
 
   // 3. Online AI Check with Live Search Guidance
-  const prompt = `Perform a thorough font trademark and availability audit for the name: "${cleanName}".
-Step 1: Search for "${cleanName} font" and "${cleanName} typeface" across Google, Creative Market, DaFont, MyFonts, Fontspring, Behance, and independent foundries (such as Bombastype, Set Sail Studios, Dharma Type, RetroStudio).
-Step 2: If an existing font, typeface family, or lettering product with this name exists, state the foundry or designer name clearly.
+  const prompt = `Conduct a rigorous real-time font availability and trademark audit for: "${cleanName}".
+Task: Search the live web for "${cleanName} font" and "${cleanName} typeface" on DaFont, MyFonts, Creative Market, Fontspring, Behance, Adobe Fonts, or indie foundries (e.g. Bombastype, Subqi Studio, Set Sail Studios).
+If this name is already taken by an existing font release, state the creator/foundry and where it is sold.
 
-Output your final verdict strictly as a JSON markdown block:
+Return your evaluation as a clean JSON block:
 \`\`\`json
 {
   "isTaken": boolean,
   "status": "TAKEN" or "POSSIBLE_MATCH" or "LIKELY_AVAILABLE",
   "foundryOrDesigner": "Designer or Foundry name if known",
-  "details": "Accurate explanation of the existing font or verification findings"
+  "details": "Explanation of existing font or live search findings"
 }
 \`\`\``;
 
   try {
     let rawText = '';
+    let groundingUrls: Array<{ title: string; url: string }> = [];
+    let searchQueries: string[] = [];
 
     if (provider === 'gemini') {
       const activeModel = model || 'gemini-1.5-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey.trim()}`;
       
-      // Try first with Google Search Grounding tool
+      // Try with Google Search Grounding tool (do NOT send responseMimeType: application/json because Gemini rejects tools with structured JSON mode)
       let res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          tools: [{ googleSearch: {} }]
+          tools: [{ google_search: {} }]
         })
       });
 
-      // If tools rejected (e.g. on older endpoints), fallback without tools
+      // Fallback with camelCase googleSearch if snake_case rejected
+      if (!res.ok) {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            tools: [{ googleSearch: {} }]
+          })
+        });
+      }
+
+      // Fallback without tools if tools are not supported for this key
       if (!res.ok) {
         res = await fetch(url, {
           method: 'POST',
@@ -108,6 +225,22 @@ Output your final verdict strictly as a JSON markdown block:
       if (!res.ok) throw new Error(`Gemini status ${res.status}`);
       const data = await res.json();
       rawText = data?.candidates?.[0]?.parts?.[0]?.text || '';
+
+      // Extract real Google Search Grounding Metadata
+      const grounding = data?.candidates?.[0]?.groundingMetadata;
+      if (grounding) {
+        if (Array.isArray(grounding.webSearchQueries)) {
+          searchQueries = grounding.webSearchQueries;
+        }
+        if (Array.isArray(grounding.groundingChunks)) {
+          groundingUrls = grounding.groundingChunks
+            .map((chunk: any) => ({
+              title: chunk.web?.title || 'Web Result',
+              url: chunk.web?.uri || ''
+            }))
+            .filter((u: any) => !!u.url);
+        }
+      }
     } else {
       // Groq
       const activeModel = model || 'llama-3.3-70b-versatile';
@@ -128,30 +261,56 @@ Output your final verdict strictly as a JSON markdown block:
 
     // Extract JSON block
     const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON block returned by AI');
+    let parsed: any = {};
+    if (jsonMatch) {
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        parsed = {};
+      }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Check if any real Google Search grounding chunks matched known font marketplaces
+    const marketplaceHit = groundingUrls.find(item => 
+      KNOWN_FONT_MARKETPLACE_DOMAINS.some(d => item.url.toLowerCase().includes(d)) ||
+      item.title.toLowerCase().includes('font') ||
+      item.title.toLowerCase().includes('typeface')
+    );
+
+    const isTaken = !!parsed.isTaken || !!marketplaceHit;
+    let status: 'TAKEN' | 'POSSIBLE_MATCH' | 'LIKELY_AVAILABLE' | 'UNVERIFIED' = 
+      isTaken ? 'TAKEN' : (parsed.status || 'LIKELY_AVAILABLE');
+
+    let details = parsed.details;
+    if (marketplaceHit && !details?.includes('Found')) {
+      details = `Existing font found on Google Search: "${marketplaceHit.title}" (${marketplaceHit.url})`;
+    } else if (!details) {
+      details = isTaken ? 'Font with this name exists in market.' : 'No active font releases found under this name.';
+    }
+
     return {
       fontName: cleanName,
-      isTaken: !!parsed.isTaken,
-      status: parsed.status || (parsed.isTaken ? 'TAKEN' : 'LIKELY_AVAILABLE'),
-      foundryOrDesigner: parsed.foundryOrDesigner || undefined,
-      details: parsed.details || (parsed.isTaken ? 'Font with this name exists in market.' : 'No major font release found under this exact name.'),
-      sourceNote: 'AI Search Grounded Audit'
+      isTaken,
+      status,
+      foundryOrDesigner: parsed.foundryOrDesigner || (marketplaceHit ? marketplaceHit.title : undefined),
+      details,
+      sourceNote: groundingUrls.length > 0 ? 'Google Live Search Grounded' : 'AI Knowledge Scan',
+      groundingUrls,
+      searchQueries
     };
   } catch (err: any) {
     console.warn('AI Deep Scan error:', err);
     return {
       fontName: cleanName,
       isTaken: false,
-      status: 'LIKELY_AVAILABLE',
-      details: 'Local catalog clear. Use 1-click Google search link to double check.',
-      sourceNote: 'Catalog Offline Check'
+      status: 'UNVERIFIED',
+      details: `Online search verification could not be completed (${err.message}). Use 1-click Google search to verify manually.`,
+      sourceNote: 'Unverified Online',
+      error: err.message
     };
   }
 }
+
 
 export async function generateFontNames(
   config: FontNameFilterConfig,

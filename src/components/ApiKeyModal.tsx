@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Key, ExternalLink, CheckCircle2, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { X, Key, ExternalLink, CheckCircle2, ShieldCheck, Sparkles, AlertCircle, Globe } from 'lucide-react';
 import { ApiProvider } from '../types';
 
 interface ApiKeyModalProps {
@@ -8,8 +8,17 @@ interface ApiKeyModalProps {
   geminiKey: string;
   groqKey: string;
   provider: ApiProvider;
-  onSave: (keys: { geminiKey: string; groqKey: string; provider: ApiProvider; model: string }) => void;
+  onSave: (keys: {
+    geminiKey: string;
+    groqKey: string;
+    provider: ApiProvider;
+    model: string;
+    googleCseId?: string;
+    googleSearchKey?: string;
+  }) => void;
   selectedModel: string;
+  googleCseId?: string;
+  googleSearchKey?: string;
 }
 
 export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
@@ -20,10 +29,14 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   provider,
   onSave,
   selectedModel,
+  googleCseId = '',
+  googleSearchKey = '',
 }) => {
-  const [activeTab, setActiveTab] = useState<ApiProvider>(provider);
+  const [activeTab, setActiveTab] = useState<ApiProvider | 'google-cse'>(provider);
   const [currentGeminiKey, setCurrentGeminiKey] = useState(geminiKey);
   const [currentGroqKey, setCurrentGroqKey] = useState(groqKey);
+  const [currentCseId, setCurrentCseId] = useState(googleCseId);
+  const [currentGoogleSearchKey, setCurrentGoogleSearchKey] = useState(googleSearchKey);
   const [model, setModel] = useState(selectedModel);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
@@ -34,8 +47,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
     onSave({
       geminiKey: currentGeminiKey.trim(),
       groqKey: currentGroqKey.trim(),
-      provider: activeTab,
+      provider: activeTab === 'google-cse' ? 'gemini' : activeTab,
       model: model,
+      googleCseId: currentCseId.trim(),
+      googleSearchKey: currentGoogleSearchKey.trim(),
     });
     onClose();
   };
@@ -43,8 +58,11 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   const handleClear = () => {
     if (activeTab === 'gemini') {
       setCurrentGeminiKey('');
-    } else {
+    } else if (activeTab === 'groq') {
       setCurrentGroqKey('');
+    } else {
+      setCurrentCseId('');
+      setCurrentGoogleSearchKey('');
     }
   };
 
@@ -126,14 +144,14 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 setModel('gemini-1.5-flash');
                 setTestStatus('idle');
               }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'gemini'
                   ? 'bg-white dark:bg-studio-800 text-brand-600 dark:text-brand-400 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Google Gemini (Free)
+              Google Gemini
             </button>
             <button
               onClick={() => {
@@ -141,14 +159,28 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 setModel('llama-3.3-70b-versatile');
                 setTestStatus('idle');
               }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'groq'
                   ? 'bg-white dark:bg-studio-800 text-brand-600 dark:text-brand-400 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Groq Cloud (Free)
+              Groq Cloud
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('google-cse');
+                setTestStatus('idle');
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                activeTab === 'google-cse'
+                  ? 'bg-white dark:bg-studio-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Google Search (CSE)
             </button>
           </div>
         </div>
@@ -174,7 +206,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 {currentGeminiKey && (
                   <button
                     onClick={handleClear}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -189,10 +221,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 >
                   Get 100% Free Gemini API Key <ExternalLink className="w-3 h-3" />
                 </a>
-                <span className="text-slate-400">No credit card required</span>
+                <span className="text-slate-400">Enables live search grounding</span>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'groq' ? (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 Groq API Key
@@ -211,7 +243,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 {currentGroqKey && (
                   <button
                     onClick={handleClear}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -229,32 +261,81 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                 <span className="text-slate-400">Ultra-fast free inference</span>
               </div>
             </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Google Search Engine ID (cx)
+                </label>
+                <input
+                  type="text"
+                  value={currentCseId}
+                  onChange={(e) => setCurrentCseId(e.target.value)}
+                  placeholder="e.g. 0123456789abcdef:0123"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-studio-950 border border-slate-200 dark:border-studio-750 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Google Custom Search API Key (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={currentGoogleSearchKey}
+                  onChange={(e) => setCurrentGoogleSearchKey(e.target.value)}
+                  placeholder="AIzaSy... (Can reuse your Gemini API key)"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-studio-950 border border-slate-200 dark:border-studio-750 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                />
+              </div>
+
+              <div className="p-3 bg-indigo-50/70 dark:bg-studio-950 rounded-xl border border-indigo-100 dark:border-studio-800 text-xs text-indigo-900 dark:text-indigo-200 space-y-1.5">
+                <div className="flex items-center justify-between font-semibold">
+                  <span>How to get a Google Search Engine ID (CX):</span>
+                  <a
+                    href="https://programmablesearchengine.google.com/about/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                  >
+                    Open Google CSE <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  1. Visit Google Programmable Search Engine and click "Add".<br/>
+                  2. Name it "Font Checker" and choose "Search the entire web".<br/>
+                  3. Copy your Search Engine ID (cx) and paste it above to unlock live Google Search widgets directly in DumSkuy.
+                </p>
+              </div>
+            </div>
           )}
 
-          {/* Model Selection */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Target Model
-            </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-studio-950 border border-slate-200 dark:border-studio-750 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              {activeTab === 'gemini' ? (
-                <>
-                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast, Recommended Free)</option>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash (Next-gen)</option>
-                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep reasoning)</option>
-                </>
-              ) : (
-                <>
-                  <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Free)</option>
-                  <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Ultra-fast)</option>
-                </>
-              )}
-            </select>
-          </div>
+          {/* Model Selection (only for LLM providers) */}
+          {activeTab !== 'google-cse' && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                Target Model
+              </label>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-studio-950 border border-slate-200 dark:border-studio-750 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
+              >
+                {activeTab === 'gemini' ? (
+                  <>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recommended with Search Grounding)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Next-Gen with Live Web)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep reasoning)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Free)</option>
+                    <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Ultra-fast)</option>
+                  </>
+                )}
+              </select>
+            </div>
+          )}
 
           {/* Test connection alert */}
           {testStatus !== 'idle' && (
