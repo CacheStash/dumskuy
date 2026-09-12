@@ -37,8 +37,13 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
   onClose
 }) => {
   const effectiveCseId = (googleConfig.cseId && googleConfig.cseId.trim()) || DEFAULT_GOOGLE_CSE_ID;
-  const [activeQuery, setActiveQuery] = useState(initialQuery);
-  const [searchSuffix, setSearchSuffix] = useState<'font' | 'dafont' | 'myfonts' | 'creativemarket' | 'all'>('font');
+  // Sanitize font name from raw quotes or special quote marks
+  const cleanFontName = (raw: string) => {
+    return (raw || '').replace(/["'“”«»`]/g, '').trim();
+  };
+
+  const [activeQuery, setActiveQuery] = useState(() => cleanFontName(initialQuery));
+  const [searchSuffix, setSearchSuffix] = useState<'font' | 'broad' | 'dafont' | 'myfonts' | 'creativemarket' | 'all'>('font');
   const [activeTab, setActiveTab] = useState<'cse-embed' | 'serp' | 'quick-links'>('cse-embed');
   
   // Custom API configuration state
@@ -50,15 +55,17 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [serpResult, setSerpResult] = useState<LiveGoogleSearchResponse | null>(null);
 
+  const cleanQueryName = cleanFontName(activeQuery);
+
   // Computed query string based on suffix
   const getFullQuery = () => {
-    const clean = activeQuery.trim();
-    if (!clean) return '';
-    if (searchSuffix === 'dafont') return `site:dafont.com "${clean}"`;
-    if (searchSuffix === 'myfonts') return `site:myfonts.com "${clean}"`;
-    if (searchSuffix === 'creativemarket') return `site:creativemarket.com "${clean}" font`;
-    if (searchSuffix === 'all') return `"${clean}"`;
-    return `"${clean}" font`;
+    if (!cleanQueryName) return '';
+    if (searchSuffix === 'broad') return `${cleanQueryName} font`;
+    if (searchSuffix === 'dafont') return `site:dafont.com "${cleanQueryName}"`;
+    if (searchSuffix === 'myfonts') return `site:myfonts.com "${cleanQueryName}"`;
+    if (searchSuffix === 'creativemarket') return `site:creativemarket.com "${cleanQueryName}" font`;
+    if (searchSuffix === 'all') return `"${cleanQueryName}"`;
+    return `"${cleanQueryName}" font`;
   };
 
   const fullQueryString = getFullQuery();
@@ -108,14 +115,20 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
 
   // Perform search on mount or when initial query changes
   useEffect(() => {
-    setActiveQuery(initialQuery);
+    setActiveQuery(cleanFontName(initialQuery));
   }, [initialQuery]);
 
   useEffect(() => {
-    if (activeQuery.trim()) {
+    if (cleanQueryName) {
       runLiveSearch();
     }
-  }, [activeQuery, searchSuffix, effectiveCseId]);
+  }, [cleanQueryName, searchSuffix, effectiveCseId]);
+
+  useEffect(() => {
+    if (activeTab === 'cse-embed' && fullQueryString.trim()) {
+      executeCseQuery(fullQueryString);
+    }
+  }, [activeTab]);
 
   // Load Google CSE script dynamically
   useEffect(() => {
@@ -308,7 +321,17 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
                 : 'bg-slate-100 dark:bg-studio-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
             }`}
           >
-            "{activeQuery}" font
+            "{cleanQueryName}" font
+          </button>
+          <button
+            onClick={() => setSearchSuffix('broad')}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+              searchSuffix === 'broad'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-studio-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            {cleanQueryName} font (Broad)
           </button>
           <button
             onClick={() => setSearchSuffix('dafont')}
@@ -520,24 +543,49 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
         {/* TAB 1: OFFICIAL GOOGLE CSE WIDGET */}
         {activeTab === 'cse-embed' && (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-indigo-50/50 dark:bg-studio-950 rounded-xl border border-indigo-100 dark:border-studio-800 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-indigo-50/70 dark:bg-studio-950 rounded-xl border border-indigo-100 dark:border-studio-800 text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  Google Custom Search Engine: <code className="font-mono text-indigo-600 dark:text-indigo-400">{effectiveCseId}</code>
+                  CSE ID: <code className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{effectiveCseId}</code>
+                </span>
+                <span className="hidden sm:inline text-slate-400">|</span>
+                <span className="hidden sm:inline text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                  {fullQueryString}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400">
-                Official Google Search Frame
-              </span>
+              
+              <div className="flex items-center gap-2">
+                <a
+                  href={directGoogleSearchUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-white dark:bg-studio-800 hover:bg-slate-100 dark:hover:bg-studio-700 text-indigo-600 dark:text-indigo-400 font-semibold rounded-lg text-xs border border-slate-200 dark:border-studio-700 flex items-center gap-1 transition-colors"
+                  title="Verify query directly on standard Google Search in a new tab"
+                >
+                  <span>Verify in Google Web</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            {/* Quick guidance banner */}
+            <div className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-studio-900/60 border border-slate-200/80 dark:border-studio-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-2">
+              <Info className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                Jika hasil CSE tidak menampilkan data, pastikan pengaturan <strong className="text-slate-700 dark:text-slate-200">"Search the entire web"</strong> aktif di konsol Google CSE Anda, atau klik <strong className="text-indigo-600 dark:text-indigo-400">Verify in Google Web</strong> di atas.
+              </p>
             </div>
 
             {/* Official Google CSE Widget Element */}
-            <div className="p-3 bg-white dark:bg-studio-950 rounded-2xl border border-slate-200 dark:border-studio-800 min-h-[380px] overflow-hidden">
+            <div className="p-3 bg-white dark:bg-studio-950 rounded-2xl border border-slate-200 dark:border-studio-800 min-h-[380px] overflow-hidden google-cse-wrapper">
               <div
                 className="gcse-search"
                 data-gname="dumskuy-gsearch"
+                data-overlayResults="false"
                 data-autoSearchOnLoad="true"
+                data-enableAutoComplete="true"
+                data-enableHistory="false"
               ></div>
             </div>
           </div>
