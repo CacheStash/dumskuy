@@ -422,24 +422,27 @@ export const FontNameFinder: React.FC<FontNameFinderProps> = ({
             </p>
           </div>
 
-          {/* CONTROL 2: THEME / SOURCE (Inspirasi Nama) */}
+          {/* CONTROL 2: GENRE / NAMING STYLE (Inspirasi Konsep & Atmosfer) */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-              Naming Inspiration Source
+              Genre / Naming Style
             </label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as NamingCategory)}
-              className="w-full py-2.5 px-3 text-xs bg-slate-50 dark:bg-studio-950 border border-slate-200 dark:border-studio-750 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full py-2.5 px-3 text-xs bg-slate-50 dark:bg-studio-950 border border-slate-200 dark:border-studio-750 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
             >
-              <option value="all">Semua Lokasi & Peta (Global & Nusantara)</option>
-              <option value="islands">Pulau & Archipelago (Islands)</option>
-              <option value="geography">Kota, Desa & Lembah (Cities, Towns, Maps)</option>
-              <option value="nature">Alam, Monolit & Mineral (Nature & Red Rocks)</option>
-              <option value="luxury">Atelier Mewah & Kastil (Luxury & Castles)</option>
+              <option value="all">🌐 All Genres (Eklektik Campuran)</option>
+              <option value="horror-gothic">🩸 Horror / Gothic / Occult (Morbid, Crypt, Hex)</option>
+              <option value="scifi-cyberpunk">🛸 Sci-Fi / Space / Cyberpunk (Orbit, Zenith, Xenon)</option>
+              <option value="modern-swiss">📐 Modern / Swiss / Tech Minimalist (Forma, Modul)</option>
+              <option value="retro-vintage">📻 Retro / Vintage / Nostalgia (Moonshine, Velvet)</option>
+              <option value="brutalist-acid">⚡ Brutalist / Acid / Streetwear (Distortion, Riot)</option>
+              <option value="luxury-editorial">💎 Luxury / High-End Editorial (Ethereal, Aurelia)</option>
+              <option value="playful-cartoon">🎈 Playful / Cartoon / Kids (Boing, Jellypop, Chonky)</option>
             </select>
             <p className="text-[11px] text-slate-400 mt-1">
-              Fokus pada nama tempat tersembunyi yang belum pernah dipakai font lain.
+              Menghasilkan nama berdasarkan konsep, atmosfer & neologisme unik (bukan nama kota).
             </p>
           </div>
 

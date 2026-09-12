@@ -77,7 +77,15 @@ export interface AssetTypeMeta {
    FONT NAME FINDER & AVAILABILITY CHECKER TYPES
    ========================================================================= */
 
-export type NamingCategory = 'all' | 'geography' | 'islands' | 'nature' | 'mythology' | 'luxury';
+export type NamingCategory = 
+  | 'all'
+  | 'horror-gothic'
+  | 'scifi-cyberpunk'
+  | 'modern-swiss'
+  | 'retro-vintage'
+  | 'brutalist-acid'
+  | 'luxury-editorial'
+  | 'playful-cartoon';
 
 export type WordCountOption = 'single' | 'double' | 'any';
 

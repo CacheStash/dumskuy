@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Copy,
   Check,
@@ -13,9 +13,15 @@ import {
   Layers,
   CheckCheck,
   Grid,
-  Eye
+  Eye,
+  ExternalLink,
+  ChevronDown,
+  ShieldAlert,
+  ShieldCheck,
+  Search
 } from 'lucide-react';
 import { GeneratedSpecimen, FontSettings, AssetType } from '../types';
+import { checkFontCollision } from '../data/existingFontsCatalog';
 
 interface SpecimenPreviewProps {
   specimen: GeneratedSpecimen | null;
@@ -36,6 +42,19 @@ export const SpecimenPreview: React.FC<SpecimenPreviewProps> = ({
 }) => {
   const [showRulers, setShowRulers] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
+  const availabilityRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (availabilityRef.current && !availabilityRef.current.contains(event.target as Node)) {
+        setIsAvailabilityOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!specimen) {
     return (
@@ -66,6 +85,12 @@ export const SpecimenPreview: React.FC<SpecimenPreviewProps> = ({
     textTransform: fontSettings.textTransform,
     textAlign: fontSettings.textAlign,
   };
+
+  const fontName = specimen.headline.trim();
+  const collision = fontName ? checkFontCollision(fontName) : null;
+  const quotedFontName = `"${fontName}" font`;
+  const encodedQuoted = encodeURIComponent(quotedFontName);
+  const encodedName = encodeURIComponent(fontName);
 
   return (
     <div className="space-y-4">
@@ -120,7 +145,7 @@ export const SpecimenPreview: React.FC<SpecimenPreviewProps> = ({
           {/* Copy All */}
           <button
             onClick={onCopyAll}
-            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-sm shadow-brand-500/20 flex items-center gap-1.5 transition-all active:scale-95"
+            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-sm shadow-brand-500/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
             title="Copy all specimen texts to clipboard"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -217,6 +242,122 @@ export const SpecimenPreview: React.FC<SpecimenPreviewProps> = ({
                 </div>
               )}
             </button>
+          </div>
+
+          {/* =========================================================================
+              CHECK AVAILABILITY & QUICK ACTION BAR (REQUIREMENT 3)
+              ========================================================================= */}
+          <div className={`flex flex-wrap items-center gap-2 pt-1 ${
+            fontSettings.textAlign === 'center' ? 'justify-center' : fontSettings.textAlign === 'right' ? 'justify-end' : 'justify-start'
+          }`}>
+            {/* Quick Action: Copy Name */}
+            <button
+              onClick={() => handleCopy(fontName, 'quick-name', 'Font Name')}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-studio-800 hover:bg-slate-200 dark:hover:bg-studio-750 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-studio-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Copy font name to clipboard"
+            >
+              {copiedKey === 'quick-name' ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Name</span>
+                </>
+              )}
+            </button>
+
+            {/* Interactive Badge: Check Availability ↗ */}
+            <div className="relative" ref={availabilityRef}>
+              <button
+                onClick={() => setIsAvailabilityOpen(!isAvailabilityOpen)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                  collision?.isTaken
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
+                    : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                }`}
+                title="Verify name availability across Google, MyFonts, DaFont, and Google Fonts"
+              >
+                {collision?.isTaken ? (
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                ) : (
+                  <Search className="w-3.5 h-3.5 text-indigo-500" />
+                )}
+                <span>Check Availability ↗</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${isAvailabilityOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Popover Dropdown with Direct Instant Links */}
+              {isAvailabilityOpen && (
+                <div className="absolute left-0 sm:left-auto top-full mt-2 w-72 p-3 bg-white dark:bg-studio-850 border border-slate-200 dark:border-studio-750 rounded-2xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="pb-2 mb-2 border-b border-slate-100 dark:border-studio-800">
+                    <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+                      Verify Name: "{fontName}"
+                    </p>
+                    {collision?.isTaken ? (
+                      <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5">
+                        ⚠️ Existing font detected: {collision.sourceNote}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Click below to verify live across font marketplaces.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {/* Google Search Direct Link */}
+                    <a
+                      href={`https://www.google.com/search?q=${encodedQuoted}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-studio-750 dark:hover:bg-studio-700 text-white flex items-center justify-between transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Search className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Google: "{fontName}" font</span>
+                      </div>
+                      <ExternalLink className="w-3 h-3 opacity-60" />
+                    </a>
+
+                    {/* MyFonts Link */}
+                    <a
+                      href={`https://www.myfonts.com/search?query=${encodedName}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-slate-100 dark:hover:bg-studio-800 text-slate-700 dark:text-slate-200 flex items-center justify-between transition-colors"
+                    >
+                      <span>Search on MyFonts</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                    </a>
+
+                    {/* DaFont Link */}
+                    <a
+                      href={`https://www.dafont.com/search.php?q=${encodedName}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-slate-100 dark:hover:bg-studio-800 text-slate-700 dark:text-slate-200 flex items-center justify-between transition-colors"
+                    >
+                      <span>Search on DaFont</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                    </a>
+
+                    {/* Google Fonts Link */}
+                    <a
+                      href={`https://fonts.google.com/?query=${encodedName}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-slate-100 dark:hover:bg-studio-800 text-slate-700 dark:text-slate-200 flex items-center justify-between transition-colors"
+                    >
+                      <span>Search on Google Fonts</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Tagline / Motto */}

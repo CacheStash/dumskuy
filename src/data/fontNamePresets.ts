@@ -1,72 +1,93 @@
 import { FontNameCandidate, NamingCategory, WordCountOption } from '../types';
 import { checkFontCollision } from './existingFontsCatalog';
 
-export interface PresetLocation {
+export interface PresetConceptName {
   name: string;
   wordCount: 1 | 2;
   category: NamingCategory;
-  origin: string;
+  vibe: string;
   meaning: string;
   ligatures: string[];
 }
 
-// Truly authentic, distinctive geographic locations on maps (far less saturated by commercial fonts)
-export const PRESET_LOCATIONS: PresetLocation[] = [
-  // ISLANDS & ARCHIPELAGOS (Unsaturated Hidden Gems)
-  { name: 'Maratua', wordCount: 1, category: 'islands', origin: 'Berau Archipelago Atoll, Indonesia', meaning: 'Crescent-shaped coral atoll featuring secret jungle caves and translucent mangrove waterways.', ligatures: ['rt', 'ua'] },
-  { name: 'Derawan', wordCount: 1, category: 'islands', origin: 'East Kalimantan Coral Island, Indonesia', meaning: 'Remote tropical haven of gentle giant sea turtles and turquoise lagoon shallows.', ligatures: ['wa', 'er'] },
-  { name: 'Natuna', wordCount: 1, category: 'islands', origin: 'Border Sea Archipelago, Indonesia', meaning: 'Pristine emerald archipelago framed by massive prehistoric granite sea boulders in Riau Islands.', ligatures: ['na', 'at'] },
-  { name: 'Gotland', wordCount: 1, category: 'islands', origin: 'Baltic Sea Island, Sweden', meaning: 'Medieval Hanseatic island surrounded by ancient limestone sea stacks (rauks) and fortified stone towers.', ligatures: ['tl', 'ot'] },
-  { name: 'Orkney', wordCount: 1, category: 'islands', origin: 'Northern Archipelago, Scotland', meaning: 'Wind-scoured archipelago of Neolithic stone circles, towering sea cliffs, and Viking rune heritage.', ligatures: ['kn', 'ey'] },
-  { name: 'Faroe', wordCount: 1, category: 'islands', origin: 'North Atlantic Archipelago', meaning: 'Volcanic emerald peaks plunging into foaming ocean swells with turf-roofed coastal hamlets.', ligatures: ['ro', 'ar'] },
-  { name: 'Belitung', wordCount: 1, category: 'islands', origin: 'Granite Sea Archipelago, Indonesia', meaning: 'Striking white quartz sand coastlines dotted with colossal smooth black granite megaliths.', ligatures: ['li', 'ng'] },
-  { name: 'Ischia', wordCount: 1, category: 'islands', origin: 'Gulf of Naples Volcanic Island, Italy', meaning: 'Thermal hot spring island with an imposing Aragonese castle perched upon a dark volcanic rock.', ligatures: ['ch', 'ia'] },
-  { name: 'Pantelleria', wordCount: 1, category: 'islands', origin: 'Strait of Sicily, Italy', meaning: 'Black volcanic pearl of obsidian cliffs, dry stone dammusi houses, and sweet Zibibbo wine.', ligatures: ['ll', 'nt'] },
-  { name: 'Favignana', wordCount: 1, category: 'islands', origin: 'Aegadian Archipelago, Sicily', meaning: 'Butterfly-shaped limestone island famed for ancient tufa stone quarries and sapphire sea coves.', ligatures: ['gn', 'an'] },
-  { name: 'Folegandros', wordCount: 1, category: 'islands', origin: 'Southern Cyclades, Greece', meaning: 'Cliffside whitewashed chora perched 200 meters above azure Aegean swells.', ligatures: ['le', 'nd'] },
-  { name: 'Amorgos', wordCount: 1, category: 'islands', origin: 'Deep Blue Aegean Island, Greece', meaning: 'Dramatically steep mountain island sheltering the stark white 11th-century Hozoviotissa monastery.', ligatures: ['or', 'rg'] },
-  { name: 'Formentera', wordCount: 1, category: 'islands', origin: 'Pityusic Island, Spain', meaning: 'Pure turquoise shallows, pink salt flats, and wooden boardwalks through aromatic coastal pine dunes.', ligatures: ['rm', 'nt'] },
-  { name: 'Selayar', wordCount: 1, category: 'islands', origin: 'Flores Sea Island, Indonesia', meaning: 'Ancient sailing crossroads of Dong Son bronze kettledrums and endless coconut groves.', ligatures: ['la', 'ay'] },
+export const GENRE_METADATA: Record<NamingCategory, { label: string; vibe: string; icon: string }> = {
+  'all': { label: 'All Genres (Bebas)', vibe: 'Explores all concept-driven typography styles', icon: 'Sparkles' },
+  'horror-gothic': { label: 'Horror / Gothic / Occult', vibe: 'Morbid, Crypt, Bloodlust, Nocturnal, Hex, Grimlore', icon: 'Flame' },
+  'scifi-cyberpunk': { label: 'Sci-Fi / Space / Cyberpunk', vibe: 'Orbit, Zenith, Pulsar, Xenon, Hyperion, Voidwalker', icon: 'Cpu' },
+  'modern-swiss': { label: 'Modern / Swiss / Tech Minimalist', vibe: 'Neue Forma, Modul, Kinesis, Aspect, Ratio, Structura', icon: 'Layers' },
+  'retro-vintage': { label: 'Retro / Vintage / Nostalgia', vibe: 'Moonshine, Rustler, Velvet, Sundown, Timberland', icon: 'Compass' },
+  'brutalist-acid': { label: 'Brutalist / Acid / Streetwear', vibe: 'Distortion, Concrete, Riot, Toxic, Hazard, Subversive', icon: 'Zap' },
+  'luxury-editorial': { label: 'Luxury / High-End Editorial', vibe: 'Ethereal, Aurelia, Sovereign, Opulent, Seraphine', icon: 'Crown' },
+  'playful-cartoon': { label: 'Playful / Cartoon / Kids', vibe: 'Boing, Jellypop, Chonky, Wobble, Doodle, Bouncy', icon: 'Smile' },
+};
 
-  // CITIES, TOWNS & VALLEYS WITH DOUBLE LETTERS / LIGATURES
-  { name: 'Passau', wordCount: 1, category: 'geography', origin: 'Bavaria Three Rivers City, Germany', meaning: 'Baroque city where the Danube, Inn, and Ilz rivers converge beneath fortress Veste Oberhaus.', ligatures: ['ss'] },
-  { name: 'Wattens', wordCount: 1, category: 'geography', origin: 'Tyrol Mountain Town, Austria', meaning: 'Alpine valley enclave nestled in Tyrolean peaks, historic home of crystalline glass craftsmanship.', ligatures: ['tt'] },
-  { name: 'Stafford', wordCount: 1, category: 'geography', origin: 'Midlands Ancient Borough, England', meaning: 'Historic Saxon market town with timber-framed Elizabethan estates and pottery craft guilds.', ligatures: ['ff'] },
-  { name: 'Bellagio', wordCount: 1, category: 'geography', origin: 'Lake Como Promontory, Italy', meaning: 'The "Pearl of Lake Como", celebrated for steep cobbled stairways and neoclassical villa gardens.', ligatures: ['ll'] },
-  { name: 'Ferrara', wordCount: 1, category: 'geography', origin: 'Emilia-Romagna Renaissance City, Italy', meaning: 'Este ducal capital surrounded by miles of ancient brick ramparts and terracotta palaces.', ligatures: ['rr'] },
-  { name: 'Inverness', wordCount: 1, category: 'geography', origin: 'Highlands Capital, Scotland', meaning: 'Crown of the Scottish Highlands where River Ness empties toward mystical Loch Ness.', ligatures: ['ss'] },
-  { name: 'Moorland', wordCount: 1, category: 'nature', origin: 'Heather Moor Plateau, Yorkshire', meaning: 'Rolling windswept wild plateau carpeted in purple heather, granite tors, and peat bogs.', ligatures: ['oo'] },
-  { name: 'Stirling', wordCount: 1, category: 'geography', origin: 'Royal Citadel, Scotland', meaning: 'Perched high upon an extinct volcanic crag, the ancient key to the Kingdom of Scotland.', ligatures: ['st'] },
-  { name: 'Cassis', wordCount: 1, category: 'geography', origin: 'Provence Fishing Port, France', meaning: 'Charming Mediterranean harbour sheltered beneath Cap Canaille, Europe’s highest sea cliff.', ligatures: ['ss'] },
-  { name: 'Schaffhausen', wordCount: 1, category: 'geography', origin: 'Upper Rhine Historic Town, Switzerland', meaning: 'Medieval town renowned for ornate oriel bay windows and the roaring Rhine Falls.', ligatures: ['ff'] },
-  { name: 'Tarragona', wordCount: 1, category: 'geography', origin: 'Costa Daurada Roman Port, Spain', meaning: 'Ancient Roman coastal capital bathed in golden sunlight with seaside amphitheatre ruins.', ligatures: ['rr'] },
-  { name: 'Castille', wordCount: 1, category: 'luxury', origin: 'Historical Kingdom, Spain', meaning: 'Land of fortified hilltop stone castles, deep wine cellars, and austere regal nobility.', ligatures: ['st', 'll'] },
-  { name: 'Rosslyn', wordCount: 1, category: 'mythology', origin: 'Midlothian Chapel Woods, Scotland', meaning: 'Gothic forest sanctuary steeped in Templar masonry, carved green men, and astronomical symbols.', ligatures: ['ss'] },
-  { name: 'Valldemossa', wordCount: 1, category: 'geography', origin: 'Serra de Tramuntana, Mallorca', meaning: 'Stone carthusian monastery nestled high among terraced almond groves and olive hills.', ligatures: ['ll', 'ss'] },
-  { name: 'Albarracin', wordCount: 1, category: 'geography', origin: 'Aragon Medieval Citadel, Spain', meaning: 'Dramatically preserved pink clay fortified citadel perched above a winding river gorge.', ligatures: ['rr'] },
-  { name: 'Kintamani', wordCount: 1, category: 'geography', origin: 'Batur Highland, Bali, Indonesia', meaning: 'High mountain ridge perched above Mount Batur volcano, renowned for cool mountain air and citrus groves.', ligatures: ['nt'] },
-  { name: 'Sawahlunto', wordCount: 1, category: 'geography', origin: 'West Sumatra Heritage Town, Indonesia', meaning: 'UNESCO heritage valley town of Dutch colonial brick architecture and winding mountain railway tracks.', ligatures: ['ah', 'nt'] },
-  { name: 'Trowulan', wordCount: 1, category: 'geography', origin: 'Ancient Majapahit Capital, Indonesia', meaning: 'Historic 14th-century capital of terracotta bathing pools, red brick gates, and royal reservoirs.', ligatures: ['ow', 'an'] },
+// Inventive, concept-driven, non-geographic font names across all 7 genres
+export const PRESET_CONCEPT_NAMES: PresetConceptName[] = [
+  // 1. HORROR / GOTHIC / OCCULT
+  { name: 'Morbid Crypt', wordCount: 2, category: 'horror-gothic', vibe: 'Occult Gothic', meaning: 'Dark ritual stone catacombs with chilling medieval blackletter weight.', ligatures: ['or', 'pt'] },
+  { name: 'Nocturnal Hex', wordCount: 2, category: 'horror-gothic', vibe: 'Coven Witchcraft', meaning: 'Midnight incantations cast through sharp triangular serifs and thorned terminals.', ligatures: ['ct', 'ex'] },
+  { name: 'Grimlore', wordCount: 1, category: 'horror-gothic', vibe: 'Dark Fantasy', meaning: 'Forgotten grimoires bound in blackened leather and iron clasps.', ligatures: ['gr', 'or'] },
+  { name: 'Bloodlust', wordCount: 1, category: 'horror-gothic', vibe: 'Vampiric Gothic', meaning: 'Aggressive spiky blackletter stems sharpened like cold predator fangs.', ligatures: ['oo', 'st'] },
+  { name: 'Coven Spire', wordCount: 2, category: 'horror-gothic', vibe: 'Occult Architecture', meaning: 'Towering Gothic spires silhouetted against a blood-red eclipse.', ligatures: ['ov', 'sp'] },
+  { name: 'Phantom Vein', wordCount: 2, category: 'horror-gothic', vibe: 'Eerie Ethereal', meaning: 'Cold spectral filaments drifting through mist-shrouded Victorian cemeteries.', ligatures: ['nt', 'ei'] },
+  { name: 'Necromancy', wordCount: 1, category: 'horror-gothic', vibe: 'Occult Magic', meaning: 'Ancient summoner glyphs with fractured strokes and jagged ascenders.', ligatures: ['cr', 'an'] },
+  { name: 'Obsidian Skull', wordCount: 2, category: 'horror-gothic', vibe: 'Dark Relic', meaning: 'Carved volcanic glass reflecting distorted candlelight in an underground vault.', ligatures: ['ss', 'll'] },
 
-  // TWO WORDS / TWO LINES (2 Kata Distinctive Pairings)
-  { name: 'Maratua Reef', wordCount: 2, category: 'islands', origin: 'Outer Berau Sea, Indonesia', meaning: 'Pristine ocean drop-offs where coral pinnacles meet translucent oceanic depths.', ligatures: ['rt', 'ee'] },
-  { name: 'Passau Heritage', wordCount: 2, category: 'geography', origin: 'Bavarian Border Confluence', meaning: 'Baroque structural dignity inspired by three alpine rivers meeting beneath historic spires.', ligatures: ['ss', 'er', 'it'] },
-  { name: 'Sumba Textura', wordCount: 2, category: 'islands', origin: 'East Nusa Tenggara, Indonesia', meaning: 'Ancestral megalithic balance and the organic rhythmic cadence of indigo handwoven ikat.', ligatures: ['mb', 'ex'] },
-  { name: 'Valldemossa Stone', wordCount: 2, category: 'geography', origin: 'Tramuntana Mountain Village, Spain', meaning: 'Weathered ochre cobblestones and terracotta rooflines framed against alpine pine ridges.', ligatures: ['ll', 'ss', 'st'] },
-  { name: 'Gotland Runic', wordCount: 2, category: 'islands', origin: 'Baltic Sea Coast, Sweden', meaning: 'Ancient carved limestone monuments standing firm against Baltic sea winds.', ligatures: ['tl', 'un', 'ic'] },
-  { name: 'Kintamani Mist', wordCount: 2, category: 'geography', origin: 'Volcanic Ridge, Bali, Indonesia', meaning: 'Cool morning cloud layers sweeping across volcanic lakes and pine-shaded coffee plantations.', ligatures: ['nt', 'st'] },
-  { name: 'Belitung Monolith', wordCount: 2, category: 'islands', origin: 'South China Sea Coast, Indonesia', meaning: 'Colossal black granite boulders sculpted smooth by millennia of tropical ocean waves.', ligatures: ['li', 'th'] },
-  { name: 'Albarracin Clay', wordCount: 2, category: 'geography', origin: 'Aragon Mountain Pass, Spain', meaning: 'Warm earthen ramparts winding along steep canyon limestone cliffs.', ligatures: ['rr', 'ay'] },
-  { name: 'Sawahlunto Brick', wordCount: 2, category: 'geography', origin: 'West Sumatra Valley, Indonesia', meaning: 'Colonial industrial heritage expressed in sturdy fired terracotta brick and mountain locomotives.', ligatures: ['ah', 'ck'] },
-  { name: 'Schaffhausen Fall', wordCount: 2, category: 'geography', origin: 'Upper Rhine Valley, Switzerland', meaning: 'Thundering glacial water currents and precision horology heritage.', ligatures: ['ff', 'll'] },
-  { name: 'Ischia Thermal', wordCount: 2, category: 'islands', origin: 'Campanian Volcanic Coast, Italy', meaning: 'Ancient mineral hot springs bubbling through aromatic Mediterranean pine groves.', ligatures: ['ch', 'rm', 'al'] },
-  { name: 'Rosslyn Masonry', wordCount: 2, category: 'mythology', origin: 'Midlothian Ancient Chapel, Scotland', meaning: 'Intricate Gothic stone carvings encoding celestial geometry and floral symbolism.', ligatures: ['ss', 'on', 'ry'] },
-  { name: 'Trowulan Red', wordCount: 2, category: 'geography', origin: 'Majapahit Royal Realm, Indonesia', meaning: 'The timeless warm terracotta red of ancient Southeast Asian imperial temples.', ligatures: ['ow', 'ed'] },
-  { name: 'Faroe Solitude', wordCount: 2, category: 'islands', origin: 'North Atlantic Ocean, Denmark', meaning: 'Epic basalt sea stacks enveloped in low-drifting clouds and ocean spray.', ligatures: ['ro', 'li', 'tu'] }
+  // 2. SCI-FI / SPACE / CYBERPUNK
+  { name: 'Xenon Pulsar', wordCount: 2, category: 'scifi-cyberpunk', vibe: 'Astrophysical', meaning: 'Blinding bursts of electromagnetic neon energy across the stellar void.', ligatures: ['en', 'ls', 'ar'] },
+  { name: 'Hyperion Void', wordCount: 2, category: 'scifi-cyberpunk', vibe: 'Deep Space', meaning: 'Monumental orbital dreadnought slipping into hyperspace silence.', ligatures: ['er', 'oi'] },
+  { name: 'Zenith Protocol', wordCount: 2, category: 'scifi-cyberpunk', vibe: 'Cybernetic System', meaning: 'Overclocked neural mainframe running sub-millisecond encryption diagnostics.', ligatures: ['th', 'ro', 'ol'] },
+  { name: 'Cryo Matrix', wordCount: 2, category: 'scifi-cyberpunk', vibe: 'Sub-Zero Cyber', meaning: 'Sub-zero liquid nitrogen cooling jackets surrounding high-frequency quantum wafers.', ligatures: ['ry', 'tr'] },
+  { name: 'Singularity', wordCount: 1, category: 'scifi-cyberpunk', vibe: 'Theoretical Physics', meaning: 'The infinite gravitational core where geometry collapses into pure visual density.', ligatures: ['ng', 'ty'] },
+  { name: 'Astrotech', wordCount: 1, category: 'scifi-cyberpunk', vibe: 'Orbital Industrial', meaning: 'Brushed titanium hulls and geometric hexagonal modular lettering.', ligatures: ['st', 'ro', 'ch'] },
+  { name: 'Cyberflux', wordCount: 1, category: 'scifi-cyberpunk', vibe: 'Synthetic Flow', meaning: 'Liquid optical fiber data streams pulsing through subterranean megacity channels.', ligatures: ['fl', 'ux'] },
+  { name: 'Chronos 99', wordCount: 2, category: 'scifi-cyberpunk', vibe: 'Time Warp Y2K', meaning: 'Millennium bug experimental phosphor CRT displays with jagged horizontal scanlines.', ligatures: ['ch', 'ro', 'on'] },
+
+  // 3. MODERN / SWISS / TECH MINIMALIST
+  { name: 'Neue Forma', wordCount: 2, category: 'modern-swiss', vibe: 'Swiss Modernism', meaning: 'Rigorous mathematical clarity, asymmetric grid discipline, and objective beauty.', ligatures: ['eu', 'rm'] },
+  { name: 'Aspect Ratio', wordCount: 2, category: 'modern-swiss', vibe: 'Geometric Proportions', meaning: 'Disciplined negative space engineered for screen typography and architectural signposts.', ligatures: ['sp', 'ct', 'ti'] },
+  { name: 'Kinesis Modul', wordCount: 2, category: 'modern-swiss', vibe: 'Dynamic Functionalism', meaning: 'Kinetic typography balancing optical rhythm with pure sans-serif efficiency.', ligatures: ['ne', 'si', 'od'] },
+  { name: 'Structura', wordCount: 1, category: 'modern-swiss', vibe: 'Bauhaus Tectonics', meaning: 'Exposed structural purity where form strictly follows purpose without decoration.', ligatures: ['tr', 'ct', 'ra'] },
+  { name: 'Objectiv', wordCount: 1, category: 'modern-swiss', vibe: 'Neue Grafik', meaning: 'Neutral communication vessel engineered to let the raw message speak unobstructed.', ligatures: ['bj', 'ct', 'iv'] },
+  { name: 'Ratio Grotesk', wordCount: 2, category: 'modern-swiss', vibe: 'Golden Section', meaning: 'Proportional geometric arches and consistent mechanical monoline stroke weight.', ligatures: ['ti', 'ro', 'sk'] },
+  { name: 'Tectonic Grid', wordCount: 2, category: 'modern-swiss', vibe: 'Industrial Layout', meaning: 'Structural foundation designed like modern steel and cast-concrete architecture.', ligatures: ['ct', 'ic', 'gr'] },
+
+  // 4. RETRO / VINTAGE / NOSTALGIA
+  { name: 'Moonshine Velvet', wordCount: 2, category: 'retro-vintage', vibe: 'Prohibition Era', meaning: 'Secret Appalachian copper stills producing bold liquor with a silky smooth finish.', ligatures: ['oo', 'sh', 'lv', 'et'] },
+  { name: 'Rustler Timber', wordCount: 2, category: 'retro-vintage', vibe: 'Americana Trade', meaning: 'Heavy crosscut saws, cedar shavings, and double-stitched denim work jackets.', ligatures: ['st', 'tl', 'er', 'mb'] },
+  { name: 'Sundown Bourbon', wordCount: 2, category: 'retro-vintage', vibe: 'Southern Heritage', meaning: 'Charred American oak barrels glowing in the amber light of twilight verandas.', ligatures: ['un', 'ow', 'ou', 'rb'] },
+  { name: 'Heritage Copper', wordCount: 2, category: 'retro-vintage', vibe: 'Old Guild Workshop', meaning: 'Hand-hammered warm metal kettleware and engraved printing plates.', ligatures: ['er', 'it', 'pp'] },
+  { name: 'Golden Saloon', wordCount: 2, category: 'retro-vintage', vibe: 'Frontier Nostalgia', meaning: 'Swing doors, upright honky-tonk piano keys, and gold dust weighed on brass scales.', ligatures: ['ld', 'oo', 'al'] },
+  { name: 'Blackwood Roaster', wordCount: 2, category: 'retro-vintage', vibe: 'Cast Iron Artisan', meaning: 'Rich espresso beans tumbling in red-hot cast iron drums over hickory wood embers.', ligatures: ['ck', 'oo', 'st', 'er'] },
+  { name: 'Ironclad Stitches', wordCount: 2, category: 'retro-vintage', vibe: 'Heavyweight Denim', meaning: 'Triple-needle chainstitching on 18oz Japanese selvage cotton.', ligatures: ['on', 'cl', 'tt', 'ch'] },
+
+  // 5. BRUTALIST / ACID / STREETWEAR
+  { name: 'Distortion Riot', wordCount: 2, category: 'brutalist-acid', vibe: 'Subversive Streetwear', meaning: 'Overdriven guitar feedback, megaphone slogans, and raw silkscreened protest posters.', ligatures: ['st', 'or', 'ti', 'io'] },
+  { name: 'Concrete Hazard', wordCount: 2, category: 'brutalist-acid', vibe: 'Bunker Industrial', meaning: 'High-contrast yellow and black hazard bars spray-painted on chipped Soviet bunker walls.', ligatures: ['on', 'cr', 'az', 'rd'] },
+  { name: 'Toxic Subversion', wordCount: 2, category: 'brutalist-acid', vibe: 'Acid Rave Culture', meaning: 'Fluorescent green glowsticks, heavy smoke machines, and 160 BPM drum & bass.', ligatures: ['xi', 'ub', 'rs', 'on'] },
+  { name: 'Bunker Barricade', wordCount: 2, category: 'brutalist-acid', vibe: 'Heavy Tactical', meaning: 'Reinforced ballistic nylon, modular Molle straps, and cold corrugated iron gates.', ligatures: ['nk', 'er', 'rr', 'ca'] },
+  { name: 'Anarchy Mono', wordCount: 2, category: 'brutalist-acid', vibe: 'Underground Zine', meaning: 'Distressed typewriter keys hammered furiously onto cheap recycled newsprint.', ligatures: ['ch', 'on'] },
+  { name: 'Heavy Overlock', wordCount: 2, category: 'brutalist-acid', vibe: 'Deconstructed Garment', meaning: 'Exposed seam allowances and unclipped threads on an oversized boxy hoodie.', ligatures: ['ea', 'vy', 'er', 'ck'] },
+
+  // 6. LUXURY / HIGH-END EDITORIAL
+  { name: 'Ethereal Aurelia', wordCount: 2, category: 'luxury-editorial', vibe: 'Haute Horlogerie', meaning: 'Delicate high-contrast hairline serifs floating like champagne bubbles at a Paris salon.', ligatures: ['th', 'er', 'ea', 'au', 'el', 'ia'] },
+  { name: 'Sovereign Silk', wordCount: 2, category: 'luxury-editorial', vibe: 'Monarchial Elegance', meaning: 'Loom-woven Lyon damask flowing gracefully over marble imperial staircases.', ligatures: ['ov', 'er', 'ei', 'gn', 'lk'] },
+  { name: 'Opulent Noir', wordCount: 2, category: 'luxury-editorial', vibe: 'Midnight Black Tie', meaning: 'Flawless velvet tuxedos illuminated by indirect amber chandeliers at the opera.', ligatures: ['pu', 'le', 'nt', 'oi'] },
+  { name: 'Seraphine Atelier', wordCount: 2, category: 'luxury-editorial', vibe: 'Fine Parfumerie', meaning: 'Crystal perfume decanters infused with rare May roses from Grasse.', ligatures: ['ph', 'in', 'el', 'ie'] },
+  { name: 'Lumina Solitaire', wordCount: 2, category: 'luxury-editorial', vibe: 'High Jewellery', meaning: 'Brilliant-cut diamonds set in hand-carved micro-platinum bezels.', ligatures: ['mi', 'na', 'ol', 'it', 'ai'] },
+  { name: 'Palais Royale', wordCount: 2, category: 'luxury-editorial', vibe: 'Château Heritage', meaning: 'Gilded mirrors and intricate boiserie panelling overlooking the Tuileries gardens.', ligatures: ['al', 'is', 'oy', 'le'] },
+
+  // 7. PLAYFUL / CARTOON / KIDS
+  { name: 'Jellypop Boing', wordCount: 2, category: 'playful-cartoon', vibe: 'Bouncy Candy', meaning: 'Squishy gelatin letters bouncing off trampoline pads with colorful fruit juice splashes.', ligatures: ['ll', 'yp', 'op', 'oi', 'ng'] },
+  { name: 'Chonky Wobble', wordCount: 2, category: 'playful-cartoon', vibe: 'Cute Chubby', meaning: 'Super plump, round, lovable letters that wiggle happily with every step.', ligatures: ['ch', 'on', 'bb', 'le'] },
+  { name: 'Doodle Bounce', wordCount: 2, category: 'playful-cartoon', vibe: 'Hand-Drawn Joy', meaning: 'Spontaneous crayon scribbles hopping across an open sketchbook.', ligatures: ['oo', 'dl', 'ou', 'nc'] },
+  { name: 'Snickerdoodle', wordCount: 1, category: 'playful-cartoon', vibe: 'Sweet Bakery', meaning: 'Warm cinnamon-sugar butter cookies freshly pulled from the kitchen oven.', ligatures: ['ck', 'er', 'oo', 'dl'] },
+  { name: 'Wacky Bongo', wordCount: 2, category: 'playful-cartoon', vibe: 'Jungle Rhythm', meaning: 'Energetic cartoon monkey rhythms with cheerful asymmetrical counters.', ligatures: ['ck', 'on', 'go'] },
+  { name: 'Bubble Gum', wordCount: 2, category: 'playful-cartoon', vibe: 'Fun Nostalgia', meaning: 'Giant pink balloon bubbles that pop with a delightful sugary snap.', ligatures: ['bb', 'le', 'um'] }
 ];
 
 /**
- * Filter offline preset locations according to user constraints
+ * Filter offline preset names according to user constraints
  */
 export function getOfflineFontNameCandidates(
   wordCount: WordCountOption,
@@ -75,11 +96,11 @@ export function getOfflineFontNameCandidates(
   category: NamingCategory,
   requestedCount: number = 12
 ): FontNameCandidate[] {
-  let list = [...PRESET_LOCATIONS];
+  let list = [...PRESET_CONCEPT_NAMES];
 
-  // 1. Filter by category
+  // 1. Filter by genre / category
   if (category && category !== 'all') {
-    list = list.filter(item => item.category === category || (category === 'geography' && item.category === 'islands'));
+    list = list.filter(item => item.category === category);
   }
 
   // 2. Filter by word count
@@ -96,42 +117,43 @@ export function getOfflineFontNameCandidates(
     if (exactMatches.length > 0) {
       list = exactMatches;
     } else {
-      // Synthesize candidates starting with that letter
-      const places: Record<string, string[]> = {
-        A: ['Albarracin', 'Amorgos', 'Alor', 'Aegadian', 'Appennino'],
-        B: ['Belitung', 'Bellagio', 'Bosa', 'Baturiti', 'Banda'],
-        C: ['Castille', 'Civita', 'Cadaques', 'Catterick', 'Cavtat'],
-        D: ['Derawan', 'Dinant', 'Durbuy', 'Durnstein', 'Dammusi'],
-        E: ['Eguisheim', 'Echternach', 'Engadin', 'Etruria', 'Elba'],
-        F: ['Faroe', 'Favignana', 'Folegandros', 'Ferrara', 'Frigiliana'],
-        G: ['Gotland', 'Guimaraes', 'Glorenza', 'Gruissan', 'Gjirokaster'],
-        H: ['Hallstatt', 'Hanseatic', 'Hesperia', 'Highland', 'Harbour'],
-        I: ['Ischia', 'Inverness', 'Ijen', 'Illyria', 'Ikaria'],
-        J: ['Java', 'Jura', 'Jost', 'Jalisco', 'Jordan'],
-        K: ['Kintamani', 'Kotagede', 'Kotor', 'Korcula', 'Kaysersberg'],
-        L: ['Lofoten', 'Locorotondo', 'Lugano', 'Limestone', 'Lombok'],
-        M: ['Maratua', 'Monopoli', 'Motovun', 'Monsaraz', 'Munduk'],
-        N: ['Natuna', 'Narni', 'Naantali', 'Nisyros', 'Ness'],
-        O: ['Orkney', 'Ohrid', 'Oostende', 'Obsidian', 'Ochil'],
-        P: ['Passau', 'Pantelleria', 'Piran', 'Pitigliano', 'Polignano'],
-        Q: ['Quimper', 'Quito', 'Quebec', 'Quarry', 'Quartz'],
-        R: ['Rosslyn', 'Rovinj', 'Riquewihr', 'Rantepao', 'Roti'],
-        S: ['Sawahlunto', 'Stafford', 'Stirling', 'Schaffhausen', 'Scilla'],
-        T: ['Trowulan', 'Tarragona', 'Trogir', 'Tomohon', 'Tramuntana'],
-        U: ['Ubud', 'Umbria', 'Uluwatu', 'Ushuaia', 'Uppsala'],
-        V: ['Valldemossa', 'Vianden', 'Vipiteno', 'Vlissingen', 'Volterra'],
-        W: ['Wattens', 'Wae Rebo', 'Wangi-Wangi', 'Wakatobi', 'Wexford'],
-        X: ['Xanadu', 'Xalapa', 'Xanthi', 'Xcaret', 'Xiamen'],
-        Y: ['Yorkshire', 'Yarra', 'Yosemite', 'Yucatan', 'Yonder'],
-        Z: ['Zermatt', 'Zanzibar', 'Zagreb', 'Zephyr', 'Zibibbo'],
+      // Synthesize inventive concept names starting with that letter
+      const conceptWords: Record<string, string[]> = {
+        A: ['Aspect', 'Aurelia', 'Astrotech', 'Anarchy', 'Archon'],
+        B: ['Bloodlust', 'Boing', 'Bunker', 'Barricade', 'Bubble'],
+        C: ['Crypt', 'Chonky', 'Chronos', 'Coven', 'Concrete'],
+        D: ['Distortion', 'Doodle', 'Darklore', 'Dynasty', 'Drift'],
+        E: ['Ethereal', 'Eclipse', 'Equinox', 'Echo', 'Entropy'],
+        F: ['Forma', 'Flux', 'Frostbite', 'Fracture', 'Fable'],
+        G: ['Grimlore', 'Grotesk', 'Gummy', 'Glitch', 'Gargoyle'],
+        H: ['Hyperion', 'Hex', 'Hazard', 'Heritage', 'Heavy'],
+        I: ['Ironclad', 'Illusion', 'Infinity', 'Impact', 'Ignite'],
+        J: ['Jellypop', 'Jinx', 'Juggernaut', 'Jester', 'Junction'],
+        K: ['Kinesis', 'Karma', 'Krypton', 'Kinetic', 'Kingdom'],
+        L: ['Lumina', 'Lunatic', 'Lagoon', 'Limbo', 'Legacy'],
+        M: ['Morbid', 'Modul', 'Moonshine', 'Matrix', 'Monolith'],
+        N: ['Nocturnal', 'Neue', 'Necromancy', 'Neon', 'Nexus'],
+        O: ['Obsidian', 'Orbit', 'Objectiv', 'Opulent', 'Overdrive'],
+        P: ['Pulsar', 'Phantom', 'Palais', 'Protocol', 'Pixel'],
+        Q: ['Quantum', 'Quicksilver', 'Quark', 'Quasar', 'Quaint'],
+        R: ['Ratio', 'Rustler', 'Riot', 'Runic', 'Resonance'],
+        S: ['Singularity', 'Structura', 'Sovereign', 'Sundown', 'Spire'],
+        T: ['Tectonic', 'Toxic', 'Timberland', 'Titan', 'Threshold'],
+        U: ['Ultra', 'Utopia', 'Umbra', 'Unbound', 'Underworld'],
+        V: ['Velvet', 'Voidwalker', 'Vein', 'Vortex', 'Vampire'],
+        W: ['Wobble', 'Wacky', 'Witchcraft', 'Warp', 'Wildfire'],
+        X: ['Xenon', 'Xerox', 'X-Ray', 'Xeno', 'Xanadu'],
+        Y: ['Yesteryear', 'Yield', 'Yonder', 'Yolk', 'Yearling'],
+        Z: ['Zenith', 'Zodiac', 'Zephyr', 'Zero', 'Zombie'],
       };
-      const seeds = places[letterUpper] || [`${letterUpper}oria`];
+
+      const seeds = conceptWords[letterUpper] || [`${letterUpper}on`];
       list = seeds.map((s) => ({
-        name: wordCount === 'double' ? `${s} Textura` : s,
+        name: wordCount === 'double' ? `${s} Protocol` : s,
         wordCount: (wordCount === 'double' ? 2 : 1) as 1 | 2,
-        category: 'geography' as NamingCategory,
-        origin: `Geographical map reference (${letterUpper})`,
-        meaning: `Evocative location-based typeface name crafted for distinctive visual identity.`,
+        category: category !== 'all' ? category : 'modern-swiss',
+        vibe: 'Inventive Typographic Concept',
+        meaning: `Concept-driven font name exploring distinct letterform cadence and atmospheric tension.`,
         ligatures: ['th', 'st', 'er']
       }));
     }
@@ -147,17 +169,17 @@ export function getOfflineFontNameCandidates(
   }
 
   // Convert to FontNameCandidate & run thorough collision detection
-  const candidates: FontNameCandidate[] = list.slice(0, requestedCount).map((loc, idx) => {
-    const collision = checkFontCollision(loc.name);
+  const candidates: FontNameCandidate[] = list.slice(0, requestedCount).map((item, idx) => {
+    const collision = checkFontCollision(item.name);
 
     return {
       id: `candidate-${idx}-${Date.now()}`,
-      name: loc.name,
-      wordCount: loc.wordCount,
-      origin: loc.origin,
-      category: loc.category,
-      matchedLigatures: detectLigatures(loc.name, targetLigature),
-      meaning: loc.meaning,
+      name: item.name,
+      wordCount: item.wordCount,
+      origin: GENRE_METADATA[item.category]?.label || 'Concept-Driven Naming',
+      category: item.category,
+      matchedLigatures: detectLigatures(item.name, targetLigature),
+      meaning: item.meaning,
       isKnownTaken: collision.isTaken,
       knownFontNote: collision.isTaken ? collision.sourceNote : undefined,
       timestamp: Date.now(),
@@ -172,7 +194,7 @@ export function getOfflineFontNameCandidates(
  * Detects common double-letters and ligatures in a name
  */
 export function detectLigatures(name: string, priorityQuery?: string): string[] {
-  const common = ['ss', 'tt', 'ff', 'fi', 'fl', 'll', 'oo', 'rr', 'st', 'ch', 'th', 'ee', 'mm', 'nn', 'pp', 'ua', 'wa'];
+  const common = ['ss', 'tt', 'ff', 'fi', 'fl', 'll', 'oo', 'rr', 'st', 'ch', 'th', 'ee', 'mm', 'nn', 'pp', 'ua', 'wa', 'ck', 'qu'];
   const lower = name.toLowerCase();
   const found: string[] = [];
 

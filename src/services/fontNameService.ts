@@ -176,9 +176,9 @@ export async function generateFontNames(
 
   // AI Prompting
   const wordCountRule = config.wordCount === 'single'
-    ? 'All names MUST be exactly ONE word (1 kata) (e.g. "Valldemossa", "Favignana", "Passau", "Maratua").'
+    ? 'All names MUST be exactly ONE word (1 kata) (e.g. "Morbid", "Xenon", "Structura", "Moonshine", "Distortion", "Ethereal", "Chonky").'
     : config.wordCount === 'double'
-    ? 'All names MUST be exactly TWO words (2 kata / 2 baris) (e.g. "Maratua Reef", "Passau Heritage", "Valldemossa Stone").'
+    ? 'All names MUST be exactly TWO words (2 kata / 2 baris) (e.g. "Nocturnal Hex", "Hyperion Void", "Neue Forma", "Rustler Timber", "Concrete Hazard", "Sovereign Silk", "Jellypop Boing").'
     : 'Names can be either one word or two words.';
 
   const letterRule = config.startingLetter && config.startingLetter !== 'ANY'
@@ -186,25 +186,44 @@ export async function generateFontNames(
     : '';
 
   const ligatureRule = config.targetLigature && config.targetLigature !== 'none'
-    ? `CRITICAL REQUIREMENT: EVERY font name MUST contain the character sequence / double letter / ligature "${config.targetLigature.toLowerCase()}" (such as in "Passau" for "ss", or "Wattens" for "tt", "Stafford" for "ff", etc.) so the typeface designer can showcase this specific ligature!`
-    : 'Incorporate aesthetic double-letters or ligatures (e.g. ss, tt, ff, fi, fl, ll, oo, rr, st) whenever possible.';
+    ? `CRITICAL REQUIREMENT: EVERY font name MUST contain the character sequence / double letter / ligature "${config.targetLigature.toLowerCase()}" (such as in "Passau" for "ss", or "Wattens" for "tt", "Stafford" for "ff", "Chonky" for "ch", etc.) so the typeface designer can showcase this specific ligature!`
+    : 'Incorporate aesthetic double-letters or ligatures (e.g. ss, tt, ff, fi, fl, ll, oo, rr, st, ch) whenever appropriate.';
 
-  const categoryRule = config.category === 'islands'
-    ? 'Names MUST be inspired by real islands (pulau) around the world or Indonesian archipelago (e.g. Maratua, Favignana, Amorgos, Belitung, Derawan, Gotland, Lofoten, Folegandros).'
-    : config.category === 'geography'
-    ? 'Names MUST be inspired by real places on maps (historic towns, mountain villages, capes, rivers, valleys) across Europe, Asia, Americas, or Indonesia.'
-    : config.category === 'nature'
-    ? 'Names inspired by botanicals, minerals, geological formations, red rock canyons, or astronomical terms.'
-    : config.category === 'luxury'
-    ? 'Names inspired by classic luxury, high fashion ateliers, Italian villas, or French châteaux.'
-    : 'Names inspired by real places on maps, islands, historic districts, and evocative geographic landmarks.';
+  let categoryRule = '';
+  switch (config.category) {
+    case 'horror-gothic':
+      categoryRule = 'Genre: Horror / Gothic / Occult. Vibe: Morbid, Crypt, Bloodlust, Nocturnal, Hex, Grimlore, Coven, Spire, Necromancy, Malice.';
+      break;
+    case 'scifi-cyberpunk':
+      categoryRule = 'Genre: Sci-Fi / Space / Cyberpunk. Vibe: Orbit, Zenith, Pulsar, Xenon, Hyperion, Voidwalker, Quantum, Glitch, Singularity, Astrotech.';
+      break;
+    case 'modern-swiss':
+      categoryRule = 'Genre: Modern / Swiss / Tech Minimalist. Vibe: Neue Forma, Modul, Kinesis, Aspect, Ratio, Structura, Objectiv, Monolith Grid.';
+      break;
+    case 'retro-vintage':
+      categoryRule = 'Genre: Retro / Vintage / Nostalgia. Vibe: Moonshine, Rustler, Velvet, Sundown, Timberland, Heritage, Copper, Rawhide, Golden Saloon.';
+      break;
+    case 'brutalist-acid':
+      categoryRule = 'Genre: Brutalist / Acid / Streetwear. Vibe: Distortion, Concrete, Riot, Toxic, Hazard, Subversive, Overlock, Bunker, Anarchy.';
+      break;
+    case 'luxury-editorial':
+      categoryRule = 'Genre: Luxury / High-End Editorial. Vibe: Ethereal, Aurelia, Sovereign, Opulent, Seraphine, Lumina, Solitaire, Palais Royale, Velvet Whisper.';
+      break;
+    case 'playful-cartoon':
+      categoryRule = 'Genre: Playful / Cartoon / Kids. Vibe: Boing, Jellypop, Chonky, Wobble, Doodle, Bounce, Bongo, Bubble Gum, Snickerdoodle.';
+      break;
+    default:
+      categoryRule = 'Explore an eclectic mix across Horror, Sci-Fi, Modern Swiss, Retro, Brutalist, Luxury, and Playful styles.';
+  }
 
   const prompt = `You are an elite Type Director and Font Naming Specialist for independent type foundries.
 Generate a curated collection of ${config.count || 12} original, evocative, and commercially viable typeface names.
 
-CRITICAL INSTRUCTION TO AVOID EXISTING FONTS:
-- Do NOT output already-saturated names like "Amalfi Coast", "Santorini", "Capri", "Biarritz", "California", "Sacred Bridge", "Thanjavur", or "Helvetica" because they are already taken!
-- Choose fresh, authentic, hidden geographic gems, lesser-known islands, historic towns, and distinctive pairings that have NOT been commercialized as font names yet.
+CRITICAL INSTRUCTIONS ON NAMING TYPOLOGY & UNIQUENESS:
+- Generate unique, inventive, concept-driven, or portmanteau font names.
+- Avoid overused generic tropes and AVOID purely geographic/city/country names (e.g. do NOT use "Brooklyn", "Berlin", "Dakota", "Amalfi", "Capri", "Vienna", "Tokyo") unless explicitly requested.
+- Font names must be constructed based on conceptual atmosphere, word typology, emotional tone, or neologisms matching the specific typography genre.
+- Do NOT output already-known fonts (like "Sacred Bridge", "Thanjavur", "Amalfi Coast", "Santorini", "Helvetica").
 
 RULES:
 1. ${wordCountRule}
@@ -216,8 +235,8 @@ RULES:
   {
     "name": "Font Name",
     "wordCount": 1 or 2,
-    "origin": "Real-world map location or island (e.g. 'Tramuntana Mountain Village, Mallorca')",
-    "meaning": "1 evocative sentence describing the aesthetic vibe and geographic landscape.",
+    "origin": "Short conceptual origin / atmosphere (e.g. 'Occult Gothic Arch' or 'Orbital Cyberpunk Matrix')",
+    "meaning": "1 evocative sentence describing the aesthetic tone and visual weight of the font.",
     "matchedLigatures": ["ss", "tt"]
   }
 ]
