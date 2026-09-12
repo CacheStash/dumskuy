@@ -19,6 +19,8 @@ export type Language = 'en' | 'id';
 
 export type ApiProvider = 'gemini' | 'groq';
 
+export type ActiveAppTab = 'specimen' | 'name-finder';
+
 export interface GenerationConfig {
   era: DesignEra;
   assetType: AssetType;
@@ -69,4 +71,34 @@ export interface AssetTypeMeta {
   description: string;
   iconName: string;
   sampleElements: string[];
+}
+
+/* =========================================================================
+   FONT NAME FINDER & AVAILABILITY CHECKER TYPES
+   ========================================================================= */
+
+export type NamingCategory = 'all' | 'geography' | 'islands' | 'nature' | 'mythology' | 'luxury';
+
+export type WordCountOption = 'single' | 'double' | 'any';
+
+export interface FontNameFilterConfig {
+  wordCount: WordCountOption;
+  startingLetter: string; // 'ANY' or 'A'-'Z'
+  targetLigature: string; // 'none' | 'ss' | 'tt' | 'ff' | 'fi' | 'fl' | 'st' | 'll' | 'oo' | 'rr' | custom
+  category: NamingCategory;
+  count: number;
+}
+
+export interface FontNameCandidate {
+  id: string;
+  name: string;
+  wordCount: 1 | 2;
+  origin: string; // Geographical location, map origin, or historical context
+  category: NamingCategory | string;
+  matchedLigatures: string[];
+  meaning: string;
+  isKnownTaken?: boolean;
+  knownFontNote?: string;
+  timestamp?: number;
+  source?: 'ai' | 'preset';
 }

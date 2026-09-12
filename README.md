@@ -29,7 +29,22 @@ Say goodbye to generic Latin filler text. DumSkuy produces authentic industry ja
 - 🏪 **Signboard / Storefront**: Store fascia, artisan trades, opening hours, and street address.
 - 📰 **Editorial / Poster**: Large display hero headline, editorial deck, narrative body paragraph, and spec colophon.
 
-### 3. 🎯 Starting Letter Glyph Filter (A–Z)
+### 3. 🔍 Font Name Finder & Marketplace Availability Checker (NEW!)
+- **Geographic & Map-based Inspirations**: Find authentic font names derived from real islands (Santorini, Sumba, Lofoten, Capri, Natuna, Corsica), historic towns, cities, valleys, and ancient landmarks.
+- **Word Count Options**: 1 Kata (Single Word) vs 2 Kata / 2 Baris (Double Word lockups like "Capri Riviera", "Sumba Heritage").
+- **Target Ligature / Double-Letter Filter**: Specifically hunt for names featuring `ss`, `tt`, `ff`, `fi`, `fl`, `ll`, `oo`, `rr`, `st`, etc. to showcase your custom ligatures in the typeface's own name!
+- **Starting Letter Selector (A–Z or Any)**: Filter names by starting letter.
+- **Trademark & Marketplace Taken Checker**:
+  - Automatically flags collisions against a catalog of famous existing fonts.
+  - **1-Click Deep Search Links** to check live availability directly on:
+    - **MyFonts** (Monotype marketplace)
+    - **Google Fonts**
+    - **Adobe Fonts**
+    - **DaFont**
+    - **USPTO Trademark Registry**
+- **1-Click "Test in Specimen"**: Send any candidate name straight to the Specimen Sheet generator to see how it looks formatted as a full specimen!
+
+### 4. 🎯 Starting Letter Glyph Filter (A–Z)
 Select any letter from **A to Z** (or **Any**) to enforce the primary headline to start with that specific letter. Indispensable for testing specific uppercase display glyphs, ligatures, or kerning pairs in your font family.
 
 ### 4. 🔤 Live In-Browser Font Drag & Drop Preview
