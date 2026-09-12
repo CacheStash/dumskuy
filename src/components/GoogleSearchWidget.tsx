@@ -28,19 +28,22 @@ interface GoogleSearchWidgetProps {
   onClose?: () => void;
 }
 
+export const DEFAULT_GOOGLE_CSE_ID = '62498ebe48da649c7';
+
 export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
   initialQuery,
   googleConfig,
   onSaveConfig,
   onClose
 }) => {
+  const effectiveCseId = (googleConfig.cseId && googleConfig.cseId.trim()) || DEFAULT_GOOGLE_CSE_ID;
   const [activeQuery, setActiveQuery] = useState(initialQuery);
   const [searchSuffix, setSearchSuffix] = useState<'font' | 'dafont' | 'myfonts' | 'creativemarket' | 'all'>('font');
-  const [activeTab, setActiveTab] = useState<'serp' | 'cse-embed' | 'quick-links'>('serp');
+  const [activeTab, setActiveTab] = useState<'cse-embed' | 'serp' | 'quick-links'>('cse-embed');
   
   // Custom API configuration state
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [cseIdInput, setCseIdInput] = useState(googleConfig.cseId || '');
+  const [cseIdInput, setCseIdInput] = useState(effectiveCseId);
   const [apiKeyInput, setApiKeyInput] = useState(googleConfig.apiKey || '');
 
   // Live SERP Search State
@@ -60,19 +63,46 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
 
   const fullQueryString = getFullQuery();
 
+  // Execute query via official Google CSE JavaScript API
+  const executeCseQuery = (queryText: string) => {
+    if (!queryText.trim()) return;
+    try {
+      const gsearch = (window as any).google?.search?.cse?.element?.getElement('dumskuy-gsearch');
+      if (gsearch) {
+        gsearch.execute(queryText);
+      } else {
+        // Retry after element is attached
+        setTimeout(() => {
+          const retryGsearch = (window as any).google?.search?.cse?.element?.getElement('dumskuy-gsearch');
+          if (retryGsearch) {
+            retryGsearch.execute(queryText);
+          }
+        }, 400);
+      }
+    } catch (e) {
+      console.warn('Google CSE execute notice:', e);
+    }
+  };
+
   // Trigger search when query or suffix changes
   const runLiveSearch = async (queryText = fullQueryString) => {
     if (!queryText.trim()) return;
-    setIsSearching(true);
-    try {
-      const result = await fetchLiveGoogleSearchResults(
-        queryText,
-        googleConfig.apiKey,
-        googleConfig.cseId
-      );
-      setSerpResult(result);
-    } finally {
-      setIsSearching(false);
+    
+    // Also execute query in official Google CSE element
+    executeCseQuery(queryText);
+
+    if (googleConfig.apiKey && effectiveCseId) {
+      setIsSearching(true);
+      try {
+        const result = await fetchLiveGoogleSearchResults(
+          queryText,
+          googleConfig.apiKey,
+          effectiveCseId
+        );
+        setSerpResult(result);
+      } finally {
+        setIsSearching(false);
+      }
     }
   };
 
@@ -82,30 +112,39 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
   }, [initialQuery]);
 
   useEffect(() => {
-    if (googleConfig.apiKey && googleConfig.cseId && activeQuery.trim()) {
+    if (activeQuery.trim()) {
       runLiveSearch();
     }
-  }, [activeQuery, searchSuffix, googleConfig.apiKey, googleConfig.cseId]);
+  }, [activeQuery, searchSuffix, effectiveCseId]);
 
-  // Load Google CSE script dynamically if CSE ID is provided
-  const cseContainerRef = useRef<HTMLDivElement>(null);
+  // Load Google CSE script dynamically
   useEffect(() => {
-    if (activeTab === 'cse-embed' && googleConfig.cseId) {
-      const scriptId = 'google-cse-script';
-      let script = document.getElementById(scriptId) as HTMLScriptElement;
-      if (!script) {
-        script = document.createElement('script');
-        script.id = scriptId;
-        script.async = true;
-        script.src = `https://cse.google.com/cse.js?cx=${googleConfig.cseId.trim()}`;
-        document.body.appendChild(script);
-      }
+    const scriptId = 'google-cse-script';
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.async = true;
+      script.src = `https://cse.google.com/cse.js?cx=${effectiveCseId}`;
+      document.body.appendChild(script);
     }
-  }, [activeTab, googleConfig.cseId]);
+
+    // Tell Google CSE to re-parse the DOM
+    const timer = setTimeout(() => {
+      if ((window as any).google?.search?.cse?.element) {
+        (window as any).google.search.cse.element.go();
+        if (fullQueryString.trim()) {
+          executeCseQuery(fullQueryString);
+        }
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [effectiveCseId]);
 
   const handleSaveSettings = () => {
     onSaveConfig({
-      cseId: cseIdInput.trim(),
+      cseId: cseIdInput.trim() || DEFAULT_GOOGLE_CSE_ID,
       apiKey: apiKeyInput.trim()
     });
     setIsConfigOpen(false);
@@ -317,23 +356,6 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
       {/* Content View Modes Tabs */}
       <div className="flex border-b border-slate-100 dark:border-studio-800 bg-slate-50/50 dark:bg-studio-950/40 px-4 pt-2">
         <button
-          onClick={() => setActiveTab('serp')}
-          className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
-            activeTab === 'serp'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Live SERP Results</span>
-          {serpResult && serpResult.items.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-studio-750 text-slate-700 dark:text-slate-300">
-              {serpResult.items.length}
-            </span>
-          )}
-        </button>
-
-        <button
           onClick={() => setActiveTab('cse-embed')}
           className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'cse-embed'
@@ -343,6 +365,23 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
         >
           <Globe className="w-3.5 h-3.5" />
           <span>Official Google CSE Widget</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('serp')}
+          className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'serp'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Live SERP Analysis</span>
+          {serpResult && serpResult.items.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-studio-750 text-slate-700 dark:text-slate-300">
+              {serpResult.items.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -478,31 +517,29 @@ export const GoogleSearchWidget: React.FC<GoogleSearchWidgetProps> = ({
           </div>
         )}
 
-        {/* TAB 2: OFFICIAL GOOGLE CSE WIDGET */}
+        {/* TAB 1: OFFICIAL GOOGLE CSE WIDGET */}
         {activeTab === 'cse-embed' && (
-          <div className="space-y-4">
-            {googleConfig.cseId ? (
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  Google Programmable Search Engine element loaded for CX: <code>{googleConfig.cseId}</code>
-                </p>
-                <div ref={cseContainerRef} className="gcse-search" data-query={fullQueryString}></div>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-indigo-50/50 dark:bg-studio-950 rounded-xl border border-indigo-100 dark:border-studio-800 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Google Custom Search Engine: <code className="font-mono text-indigo-600 dark:text-indigo-400">{effectiveCseId}</code>
+                </span>
               </div>
-            ) : (
-              <div className="p-6 text-center space-y-3 bg-slate-50 dark:bg-studio-950 rounded-2xl border border-slate-200 dark:border-studio-800">
-                <Globe className="w-8 h-8 text-indigo-500 mx-auto" />
-                <h4 className="font-bold text-sm">Google Search Engine ID (cx) Required</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                  To display the live interactive Google Search element directly in this frame, add your Search Engine ID in the settings above.
-                </p>
-                <button
-                  onClick={() => setIsConfigOpen(true)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer"
-                >
-                  Configure Search Engine ID
-                </button>
-              </div>
-            )}
+              <span className="text-[11px] text-slate-400">
+                Official Google Search Frame
+              </span>
+            </div>
+
+            {/* Official Google CSE Widget Element */}
+            <div className="p-3 bg-white dark:bg-studio-950 rounded-2xl border border-slate-200 dark:border-studio-800 min-h-[380px] overflow-hidden">
+              <div
+                className="gcse-search"
+                data-gname="dumskuy-gsearch"
+                data-autoSearchOnLoad="true"
+              ></div>
+            </div>
           </div>
         )}
 

@@ -39,8 +39,8 @@ export function App() {
   const [model, setModel] = useState<string>(() => localStorage.getItem('dumskuy_model') || 'gemini-1.5-flash');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
-  // Google CSE / Search credentials
-  const [googleCseId, setGoogleCseId] = useState<string>(() => localStorage.getItem('dumskuy_google_cse_id') || '');
+  // Google CSE / Search credentials (pre-configured with official Google CSE engine)
+  const [googleCseId, setGoogleCseId] = useState<string>(() => localStorage.getItem('dumskuy_google_cse_id') || '62498ebe48da649c7');
   const [googleSearchKey, setGoogleSearchKey] = useState<string>(() => localStorage.getItem('dumskuy_google_search_key') || '');
   const [activeGoogleSearchName, setActiveGoogleSearchName] = useState<string | null>(null);
 
